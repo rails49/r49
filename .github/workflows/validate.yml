@@ -1,5 +1,5 @@
-# The submission gate. Issue iot49/rails49#57 decides what it asserts, #62 what
-# it looks like; `tools/r49-validate` in iot49/rails49 does the deciding, and
+# The submission gate. Issue rails49/occupancy#57 decides what it asserts, #62 what
+# it looks like; `tools/r49-validate` in rails49/occupancy does the deciding, and
 # everything here is rendering.
 #
 # Two jobs, because they answer to different things:
@@ -51,7 +51,7 @@ jobs:
 
       - uses: actions/checkout@v7
         with:
-          repository: iot49/rails49
+          repository: rails49/occupancy
           ref: main
           path: rails49
 
@@ -216,7 +216,7 @@ jobs:
 
       - uses: actions/checkout@v7
         with:
-          repository: iot49/rails49
+          repository: rails49/occupancy
           ref: main
           path: rails49
 

@@ -2,7 +2,7 @@
 
 Photographs of model railroad layouts, with the rolling stock in them labeled by
 the people who took them. This is the training data behind
-[rails49](https://github.com/iot49/rails49), which detects track occupancy from
+[rails49](https://github.com/rails49/occupancy), which detects track occupancy from
 a camera instead of from block detectors.
 
 **Everything here is [CC BY 4.0](LICENSE).** Use it, train on it, redistribute
