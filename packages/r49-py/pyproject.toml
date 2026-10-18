@@ -7,6 +7,10 @@ license = "MIT"
 requires-python = ">=3.10"
 dependencies = ["pydantic>=2.11"]
 
+[project.urls]
+Repository = "https://github.com/rails49/r49"
+Issues = "https://github.com/rails49/r49/issues"
+
 [dependency-groups]
 dev = ["black>=25.1", "pyright>=1.1.400", "pytest>=8.3", "ruff>=0.11"]
 
@@ -17,12 +21,15 @@ build-backend = "hatchling.build"
 [tool.hatch.build.targets.wheel]
 packages = ["src/r49"]
 
-# The sdist holds a copy of ../r49/src/data.json in place of the link.
+# The sdist holds a copy of ../r49/src/data.json in place of the link, and a
+# copy of the repository's LICENSE-MIT, which the wheel built from it lists as
+# its license file.
 [tool.hatch.build.targets.sdist]
 exclude = ["src/r49/data.json"]
 
 [tool.hatch.build.targets.sdist.force-include]
 "../r49/src/data.json" = "src/r49/data.json"
+"../../LICENSE-MIT" = "LICENSE"
 
 [tool.black]
 line-length = 100

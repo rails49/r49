@@ -1,7 +1,8 @@
 import { readdirSync, readFileSync, existsSync } from 'node:fs';
 import { join } from 'node:path';
 import JSZip from 'jszip';
-import { R49Archive, R49Error, getDPT, getDPTResidual, type ImageMismatch } from '../src/index.ts';
+import type { ImageMismatch } from '../src/index.ts';
+import { R49Archive, R49Error, getDPT, getDPTResidual } from './r49.ts';
 
 /**
  * The TypeScript conformance runner: reads a case from `conformance/cases/`,
@@ -73,7 +74,7 @@ export async function judge(input: Case['input']): Promise<Outcome> {
  * else thrown is a bug in the package, not a verdict, and propagates.
  */
 export async function judgeArchive(bytes: Uint8Array): Promise<Outcome> {
-  let archive: R49Archive;
+  let archive: InstanceType<typeof R49Archive>;
   try {
     archive = await R49Archive.load(bytes);
   } catch (err) {

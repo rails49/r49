@@ -2,7 +2,8 @@
 # The gate, which CI runs as it is: @rails49/r49's tests and conformance
 # runner; rails49-r49's ruff, black, pyright, tests and conformance runner;
 # the same ruff, black and pyright over the validator's read.py; r49-validate's
-# tests; the check that every Markdown link goes somewhere; the comparison of
+# tests; the check that every Markdown link goes somewhere; the two packages'
+# one version, and their conformance cases run as installed; the comparison of
 # the two packages over the corpus; and r49-validate itself over
 # CONTRIBUTING.md's capture table and every corpus archive.
 # `r49-validate list` names the corpus.
@@ -45,9 +46,15 @@ corpus=()
 while IFS= read -r -d '' path; do corpus+=("$path"); done \
   < <("${validate[@]}" list)
 
-# The two packages must read every corpus archive alike.
+# The two packages carry one version, and pass the conformance cases as they
+# install.
+./scripts/version.sh >/dev/null
+packages=$(mktemp -d "${TMPDIR:-/tmp}/r49-out.XXXXXX")
 python=$(mktemp "${TMPDIR:-/tmp}/r49-python.XXXXXX")
-trap 'rm -f "$python"' EXIT
+trap 'rm -rf "$packages" "$python"' EXIT
+./scripts/check-packages.sh "$packages"
+
+# The two packages must read every corpus archive alike.
 uv run --project packages/r49-py --locked python tools/r49-validate/read.py \
   "${corpus[@]}" > "$python"
 "${validate[@]}" readers --python "$python" "${corpus[@]}"

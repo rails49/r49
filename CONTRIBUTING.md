@@ -128,3 +128,8 @@ and the [rails49/occupancy](https://github.com/rails49/occupancy) code and the
 model weights it trains from this corpus are AGPL-3.0, for reasons that have
 nothing to do with your photographs. The [README](README.md#licences) lists
 which paths are which.
+
+## Releasing the packages
+
+Maintainers release `@rails49/r49` and `rails49-r49` as in
+[docs/releasing.md](docs/releasing.md).
