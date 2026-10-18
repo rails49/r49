@@ -265,8 +265,9 @@ The reasoning, including why focal length is not used, is in
 ## Corpus rules
 
 These apply to archives submitted to this repository. Each is checked by the
-corpus validator, which reports it under the id shown. A **blocking** rule
-refuses the submission; a **warning** is reported and never refuses.
+corpus validator ([`tools/r49-validate`](tools/r49-validate)), which reports it
+under the id shown. A **blocking** rule refuses the submission; a **warning** is
+reported and never refuses.
 
 Blocking, for archives under `archives/`:
 

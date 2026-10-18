@@ -71,6 +71,10 @@ It **cannot** check whether your boxes actually land on cars, which is the thing
 that decides whether a submission is worth having. That part is a person reading
 a sample.
 
+The checks are [`tools/r49-validate`](tools/r49-validate), built on the Python
+package here; [CONTRIBUTING.md](CONTRIBUTING.md) shows how to run it on your
+archive before you open the pull request.
+
 ## Notes for anyone consuming this
 
 There is no generated index — the tree is the index. A committed manifest of
