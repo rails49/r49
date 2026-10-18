@@ -65,8 +65,8 @@ function differs(a: number | null, b: number | null, tolerance: number): boolean
   return Math.abs(a - b) > tolerance;
 }
 
-/** The mismatches as one string, in a fixed order, so two lists compare in any order. */
-function mismatches(outcome: ReaderOutcome): string {
+/** The image mismatches as one sorted string, equal for two lists in any order. */
+function sortedMismatches(outcome: ReaderOutcome): string {
   return JSON.stringify(outcome.imageMismatches.map(m => `${m.rule} ${m.filename}`).sort());
 }
 
@@ -101,9 +101,10 @@ export function readerDisagreements(
       if (differs(ts.residual, py.residual, tolerance)) {
         lines.push(`${ts.path}: residual is ${ts.residual} in TypeScript, ${py.residual} in Python`);
       }
-      if (mismatches(ts) !== mismatches(py)) {
+      const [tsMismatches, pyMismatches] = [sortedMismatches(ts), sortedMismatches(py)];
+      if (tsMismatches !== pyMismatches) {
         lines.push(
-          `${ts.path}: image mismatches are ${mismatches(ts)} in TypeScript, ${mismatches(py)} in Python`
+          `${ts.path}: image mismatches are ${tsMismatches} in TypeScript, ${pyMismatches} in Python`
         );
       }
     }

@@ -86,9 +86,9 @@ describe('comparing the two readers', () => {
   it('names image mismatches that differ, in any order', () => {
     const missing = { rule: 'images/missing', filename: 'a.jpg' } as const;
     const orphan = { rule: 'images/orphan', filename: 'b.jpg' } as const;
-    expect(
-      readerDisagreements([accept({ imageMismatches: [missing, orphan] })], [accept({ imageMismatches: [orphan, missing] })])
-    ).toEqual([]);
+    const typescript = accept({ imageMismatches: [missing, orphan] });
+    const python = accept({ imageMismatches: [orphan, missing] });
+    expect(readerDisagreements([typescript], [python])).toEqual([]);
     expect(readerDisagreements([accept({ imageMismatches: [orphan] })], [accept()])).toEqual([
       `${FIXTURE}: image mismatches are ["images/orphan b.jpg"] in TypeScript, [] in Python`,
     ]);
