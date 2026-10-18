@@ -33,7 +33,9 @@ calibrate it, label the cars, save the file.
 [`conformance/`](conformance/) holds cases any reader can run to show it agrees
 with FORMAT.md: inputs, and whether each is accepted or refused under which rule
 id, with its DPT and residual. [`packages/r49/`](packages/r49/) is the
-TypeScript reader and writer, `@rails49/r49`, which passes them.
+TypeScript reader and writer, `@rails49/r49`, which passes them, and
+[`packages/r49-py/`](packages/r49-py/) the read-only Python reader,
+`rails49-r49`, which passes them too.
 
 ## The layout
 
@@ -90,7 +92,7 @@ Two licences, by path:
 | `FORMAT.md`, and `conformance/` — the cases that test it | [CC BY 4.0](LICENSE) |
 | `CONTEXT.md`, `README.md`, `CONTRIBUTING.md`, `docs/` — the prose around the format | [CC BY 4.0](LICENSE) |
 | `tools/`, including the corpus validator in `tools/r49-validate/` | [MIT](LICENSE-MIT) |
-| `packages/`, including `@rails49/r49` and its conformance runner | [MIT](LICENSE-MIT) |
+| `packages/`, including `@rails49/r49`, `rails49-r49` and their conformance runners | [MIT](LICENSE-MIT) |
 | `scripts/`, `.github/`, and the workspace files at the root: `package.json`, `pnpm-workspace.yaml`, `pnpm-lock.yaml`, `.nvmrc` | [MIT](LICENSE-MIT) |
 
 Any code added outside these paths is MIT and is added to this table with it. Code that moves
