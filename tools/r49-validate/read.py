@@ -27,6 +27,7 @@ def outcome(path: str) -> dict[str, Any]:
             "rule": err.rule,
             "dpt": None,
             "residual": None,
+            "imageMismatches": [],
         }
     result = r49.fit(archive.manifest)
     return {
@@ -35,6 +36,9 @@ def outcome(path: str) -> dict[str, Any]:
         "rule": None,
         "dpt": result.dpt,
         "residual": result.residual,
+        "imageMismatches": [
+            {"rule": m.rule, "filename": m.filename} for m in archive.image_mismatches()
+        ],
     }
 
 

@@ -1,4 +1,4 @@
-import { R49Archive, R49Error, getDPT, getDPTResidual } from '@rails49/r49';
+import { R49Archive, R49Error, getDPT, getDPTResidual, type ImageMismatch } from '@rails49/r49';
 import type { ArchiveInput } from './validate.ts';
 
 /**
@@ -9,7 +9,8 @@ import type { ArchiveInput } from './validate.ts';
  * they agree on the archives contributors actually sent. `read.py` beside this
  * package writes Python's outcomes as JSON, and `r49-validate readers` compares
  * them with TypeScript's, one archive at a time: accept or reject, the format
- * rule on reject, and DPT and residual within {@link READER_TOLERANCE}.
+ * rule on reject, DPT and residual within {@link READER_TOLERANCE}, and the
+ * image mismatches on accept.
  */
 
 /** What one reader made of one archive. The shape `read.py` writes. */
@@ -21,6 +22,8 @@ export interface ReaderOutcome {
   /** The fit's DPT and residual, on accept; null where they do not resolve. */
   readonly dpt: number | null;
   readonly residual: number | null;
+  /** On accept, what the archive reports under `images/missing` and `images/orphan`. */
+  readonly imageMismatches: readonly ImageMismatch[];
 }
 
 /** Absolute, on DPT and residual alike; the conformance cases' own tolerance. */
@@ -36,7 +39,14 @@ export async function readOutcome(input: ArchiveInput): Promise<ReaderOutcome> {
     archive = await R49Archive.load(input.bytes);
   } catch (err) {
     if (!(err instanceof R49Error)) throw err;
-    return { path: input.path, result: 'reject', rule: err.rule, dpt: null, residual: null };
+    return {
+      path: input.path,
+      result: 'reject',
+      rule: err.rule,
+      dpt: null,
+      residual: null,
+      imageMismatches: [],
+    };
   }
   const manifest = archive.getManifest();
   return {
@@ -45,6 +55,7 @@ export async function readOutcome(input: ArchiveInput): Promise<ReaderOutcome> {
     rule: null,
     dpt: getDPT(manifest),
     residual: getDPTResidual(manifest),
+    imageMismatches: archive.imageMismatches(),
   };
 }
 
@@ -52,6 +63,11 @@ export async function readOutcome(input: ArchiveInput): Promise<ReaderOutcome> {
 function differs(a: number | null, b: number | null, tolerance: number): boolean {
   if (a === null || b === null) return a !== b;
   return Math.abs(a - b) > tolerance;
+}
+
+/** The mismatches as one string, in a fixed order, so two lists compare in any order. */
+function mismatches(outcome: ReaderOutcome): string {
+  return JSON.stringify(outcome.imageMismatches.map(m => `${m.rule} ${m.filename}`).sort());
 }
 
 function verdict(outcome: ReaderOutcome): string {
@@ -84,6 +100,11 @@ export function readerDisagreements(
       }
       if (differs(ts.residual, py.residual, tolerance)) {
         lines.push(`${ts.path}: residual is ${ts.residual} in TypeScript, ${py.residual} in Python`);
+      }
+      if (mismatches(ts) !== mismatches(py)) {
+        lines.push(
+          `${ts.path}: image mismatches are ${mismatches(ts)} in TypeScript, ${mismatches(py)} in Python`
+        );
       }
     }
   }

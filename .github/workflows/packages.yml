@@ -51,8 +51,9 @@ jobs:
       - run: uv run pytest
 
   # Every corpus archive, archives/ and fixtures/, loaded by both packages:
-  # accept or reject, the format rule on reject, and DPT and residual within
-  # 1e-9. Any difference fails. tools/r49-validate does the comparing.
+  # accept or reject, the format rule on reject, DPT and residual within 1e-9,
+  # and the image mismatches on accept. Any difference fails.
+  # tools/r49-validate does the comparing.
   readers:
     runs-on: ubuntu-latest
     steps:

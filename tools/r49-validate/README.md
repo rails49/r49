@@ -105,8 +105,8 @@ The conformance cases show `@rails49/r49` and the Python reader, `rails49-r49`,
 agree on purpose-built inputs. `readers` shows they agree on the archives
 contributors sent. [`read.py`](read.py) writes Python's outcome for each archive
 as JSON, and `readers` compares it with TypeScript's: accept or reject, the
-format rule on reject, and DPT and residual within 1e-9. Any difference, or an
-archive only one side reported, exits 1.
+format rule on reject, DPT and residual within 1e-9, and the image mismatches
+on accept. Any difference, or an archive only one side reported, exits 1.
 
 ```bash
 uv run --project packages/r49-py --locked python tools/r49-validate/read.py \
