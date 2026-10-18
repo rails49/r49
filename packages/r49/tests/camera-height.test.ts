@@ -72,7 +72,7 @@ describe('the unknown-key refusal is worded for the person who meets it', () => 
    * and useless to a model railroader looking at a file that will not open.
    *
    * The package does not know who called it, so it names no program: the
-   * editor words its own message from the rule id (rails49/r49#17).
+   * caller words its own message from the rule id (rails49/r49#17).
    */
   it('names the key, the likely cause, and the fix', () => {
     const archive = new R49Archive();
