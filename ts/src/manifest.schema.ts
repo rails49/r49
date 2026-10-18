@@ -1,193 +1,17 @@
 import { z } from 'zod';
-import {
-  STANDARD_GAUGE,
-  SCALE_TO_RATIO,
-  SCALES,
-  type Scale,
-} from '@occupancy/config';
+import { SCALES, type Scale } from './data.ts';
+import { FormatError, type FormatRule } from './errors.ts';
 
 /**
- * Every valid scale name, in the order `config.yaml` defines them.
+ * Every valid scale name, in the order the data file defines them.
  *
- * Sourced from `@occupancy/config`; this package declares no scale table of its
- * own. `config.yaml` is the single authored home, and a staleness check in
- * `bin/test.sh` keeps the generated binding honest.
+ * Sourced from `data/r49.json`; this package declares no scale table of its
+ * own.
  */
 export const VALID_SCALES: readonly Scale[] = SCALES;
 
-/** A scale name. Alias of `@occupancy/config`'s `Scale`. */
+/** A scale name. */
 export type ValidScales = Scale;
-
-/** Model-domain track gauge in mm (prototype gauge / scale ratio). Internal — the prototype domain is not part of the package's public contract. */
-function getGaugeMM(scale: Scale): number {
-  return STANDARD_GAUGE / SCALE_TO_RATIO[scale];
-}
-
-/**
- * Resolution in Dots Per Track (DPT): a least-squares scale fit over the
- * calibration pairs, normalized to layout zero by the camera height and
- * reported at the reference plane, converted to track widths.
- *
- * ```
- * pairs = { (i,j) : z_i == z_j,  i < j }
- * d_px' = d_px · (h − z)/h                      // camera height known
- * s     = Σ(d_px' · d_mm) / Σ(d_mm²)   over pairs
- * DPT   = s · gauge_mm(scale) · h/(h − z_ref)
- * ```
- *
- * **Why a height at all.** Layouts are not planar and cameras are not at
- * infinity, so under a pinhole camera at height `h` every length at height `z`
- * images `z/(h−z)` too large — 9.3% at track height under a 1 m camera. That
- * bias lands in DPT and so in car width, the drift tolerance, the `min_dpt`
- * gate and the resample factor. `h` removes it in closed form; focal length
- * cannot, because it cancels from the ratio. See `SPEC.md` § Camera height.
- *
- * **A pair still needs one height.** Both points of a pair must share `z`, and
- * that is not a simplification: two points at different heights sit at
- * different depths *and* different azimuths, so their pixel separation is not
- * any scale times any distance — recovering it would need the position model
- * deliberately not built (#135). What the camera height changes is that pairs
- * at *different* heights now combine correctly into one fit, each normalized to
- * layout zero, where before they either blended silently (a latent ~9% error)
- * or one plane's worth was all you could use.
- *
- * **Absent `h` the fit restricts to the reference plane** — "without a camera
- * height I can only speak about the plane you named" — and points off it stay
- * stored but inert. That is the historical behaviour for the single-plane
- * archives that are the only ones in existence, so it changes no number any of
- * them reports. `z` equality is exact: the values are typed by hand.
- *
- * The `d_mm²` weighting favours long baselines automatically, which is the
- * right bias — click error is a fixed number of pixels, so short baselines are
- * proportionally noisier. It matters twice here, because a wrong `h` is only
- * visible through pairs at two heights, and short baselines drown that signal.
- *
- * @returns DPT, or `null` when no usable pair with a nonzero separation exists
- *          — one rule covering the empty, single-point, off-reference-plane and
- *          coincident-point cases — or when the geometry is incoherent
- *          (`h` at or below the reference plane). `null` means "I cannot
- *          answer", not "zero".
- */
-export function getDPT(manifest: ManifestData): number | null {
-  const { calibration } = manifest.layout;
-  const h = calibration.camera_height_mm;
-  const zRef = calibration.reference_height_mm ?? 0;
-
-  if (h !== undefined && h <= zRef) return null;
-
-  const scale = fitScale(calibrationPairs(calibration));
-  if (scale === null) return null;
-
-  // Absent `h` the fit already sits on the reference plane; with it, the fit is
-  // at layout zero and this lifts it to where the track is.
-  const atReference = h === undefined ? scale : scale * (h / (h - zRef));
-  return atReference * getGaugeMM(manifest.layout.scale);
-}
-
-/** One equal-height pair of calibration points, as the two separations the fit sees. */
-interface CalibrationPair {
-  /** Separation in image pixels, normalized to layout zero when the camera height is known. */
-  readonly dPx: number;
-  /** Separation on the layout, in mm. */
-  readonly dMm: number;
-}
-
-/**
- * Every usable pair of calibration points, reduced to two separations.
- *
- * The one place the pair rule is applied. {@link getDPT} and
- * {@link getDPTResidual} must select and normalize the same pairs or the
- * residual would describe a fit nobody computed — which is also what makes the
- * residual validate the camera height for free: a wrong `h` normalizes pairs at
- * different heights inconsistently, and that disagreement is exactly what the
- * residual measures. It is blind when every point shares one height, because a
- * uniform scale bias is indistinguishable from a different camera distance.
- */
-function calibrationPairs(calibration: ManifestData['layout']['calibration']): CalibrationPair[] {
-  const h = calibration.camera_height_mm;
-  const zRef = calibration.reference_height_mm ?? 0;
-  const pairs: CalibrationPair[] = [];
-
-  for (let i = 0; i < calibration.points.length; i++) {
-    for (let j = i + 1; j < calibration.points.length; j++) {
-      const a = calibration.points[i];
-      const b = calibration.points[j];
-      const z = a.world.z;
-      if (b.world.z !== z) continue;
-      // Without a camera height, only the named plane can be spoken about.
-      if (h === undefined && z !== zRef) continue;
-      // A point at or above the camera is not a pose the pinhole model has.
-      if (h !== undefined && z >= h) continue;
-
-      const dPx = Math.hypot(a.px.x - b.px.x, a.px.y - b.px.y);
-      pairs.push({
-        dPx: h === undefined ? dPx : dPx * ((h - z) / h),
-        dMm: Math.hypot(a.world.x - b.world.x, a.world.y - b.world.y),
-      });
-    }
-  }
-  return pairs;
-}
-
-/**
- * The least-squares scale in **pixels per millimetre**, before the gauge turns
- * it into DPT: `Σ(d_px · d_mm) / Σ(d_mm²)`.
- *
- * `null` when the denominator is zero — no pair, or every pair zero millimetres
- * apart. Zero-separation pairs contribute nothing to either sum, so coincident
- * points land here rather than dividing by zero.
- */
-function fitScale(pairs: readonly CalibrationPair[]): number | null {
-  let numerator = 0;
-  let denominator = 0;
-  for (const { dPx, dMm } of pairs) {
-    numerator += dPx * dMm;
-    denominator += dMm * dMm;
-  }
-  if (denominator === 0) return null;
-  return numerator / denominator;
-}
-
-/**
- * How badly the calibration points disagree with the scale fitted through them:
- * the RMS of `d_px − s · d_mm` over the same pairs {@link getDPT} uses and with
- * the same height normalization applied, in **image pixels**.
- *
- * A mis-typed world coordinate is otherwise absorbed silently into `s`, which
- * shifts DPT and therefore every derived car width without anything looking
- * wrong. The residual is what makes it visible, so the editor shows it.
- *
- * It carries a second job once a camera height is authored: a wrong `h`
- * normalizes pairs at different heights inconsistently, so the same number
- * rises. Note the fit *refits* rather than holding a scale fixed, so the RMS
- * lands at roughly half the raw disagreement between planes — a 50% error in
- * `h` over 500 mm baselines at DPT 20 shows ~8 px, against a ~1.4 px click
- * floor. It stays **one number** — which fault it is, is the reader's — and it
- * is blind when every point shares a height, because a uniform scale bias is
- * indistinguishable from a different camera distance. A cross-check, never a gate.
- *
- * Pixels rather than a percentage because a click error is a fixed number of
- * pixels; the number is directly comparable to how precisely a user can hit a
- * feature. It is a pixel-domain quantity and so does not depend on `layout.scale`.
- *
- * @returns The RMS residual, or `null` when fewer than two pairs contribute —
- *          one pair reproduces itself exactly, so its residual is zero by
- *          construction and would claim an agreement nothing checked. This is
- *          "more than two coplanar points", stated in terms of the fit.
- */
-export function getDPTResidual(manifest: ManifestData): number | null {
-  const pairs = calibrationPairs(manifest.layout.calibration);
-  if (pairs.length < 2) return null;
-
-  const scale = fitScale(pairs);
-  if (scale === null) return null;
-
-  let sumSq = 0;
-  for (const { dPx, dMm } of pairs) {
-    sumSq += (dPx - scale * dMm) ** 2;
-  }
-  return Math.sqrt(sumSq / pairs.length);
-}
 
 /**
  * The manifest version this package reads and writes. There is no v3 code here
@@ -246,7 +70,7 @@ const CalibrationSchema = z
     points: z.array(CalibrationPointSchema).default([]),
     /**
      * Camera height above layout zero, in mm. Optional here, required by the
-     * editor — see {@link getDPT}. `.positive()` because a camera at or below
+     * editor — see FORMAT.md § The calibration fit. `.positive()` because a camera at or below
      * the origin is not a representable pose and every consumer divides by
      * `h − z`; the cross-field rule that it must also clear the tallest
      * calibration point is the editor's, not the schema's.
@@ -279,10 +103,10 @@ const SensorSchema = z
 const carLabelBase = {
   id: z.string().min(1),
   /**
-   * A plain string here, deliberately unvalidated against the vocabulary.
-   * Conformance is a warning in the editor and a fatal error in the training
-   * exporter; a format that refused to open files because someone pruned
-   * `config.yaml` would punish config edits.
+   * A plain string here, deliberately unvalidated against the vocabulary,
+   * which is a corpus rule. Conformance is a warning in the editor and a
+   * blocking error in the corpus validator; a format that refused to open files
+   * because a class left the vocabulary would punish vocabulary edits.
    */
   class: z.string(),
   p0: PointSchema,
@@ -321,7 +145,11 @@ const CarLabelSchema = z.discriminatedUnion('provenance', [
 function uniqueIds<T extends { id: string }>(kind: string) {
   return {
     check: (items: readonly T[]) => new Set(items.map(i => i.id)).size === items.length,
-    message: `duplicate ${kind} id: ids must be unique within their collection`,
+    // The rule rides on the issue, so parseManifest need not match the message.
+    message: {
+      message: `duplicate ${kind} id: ids must be unique within their collection`,
+      params: { rule: 'format/duplicate-id' satisfies FormatRule },
+    },
   };
 }
 
@@ -351,8 +179,8 @@ const LayoutSchema = z
      * Required, with **no default**. v3 defaulted this to `'N'`, which is not
      * safe here: `DPT = s · gauge_mm(scale)`, so a silently-assumed scale
      * reports a DPT wrong by the ratio between the two scales — up to 8.8×
-     * between Z and G. SPEC § The v4 manifest names only two defaults,
-     * `points: []` and `labeled_complete: false`, and this is not one of them.
+     * between Z and G. FORMAT.md § The manifest names the only defaults, and
+     * this is not one of them.
      */
     scale: ScaleSchema,
     calibration: CalibrationSchema,
@@ -397,64 +225,102 @@ export const ManifestDataSchema = z
   .strict();
 
 /**
- * Rejects a non-v4 manifest with a message that names the version, before the
- * schema gets a chance to report it as one issue among many.
+ * Validate a manifest, naming the format rule it broke.
  *
- * @throws If `data` is not an object, or its `version` is not 4.
- */
-/**
- * Validate a manifest, rewording the one parse failure a user can act on.
+ * Every zod failure becomes a {@link FormatError} carrying a FORMAT.md rule id,
+ * so a caller never sees zod — the schemas stay replaceable. When several rules
+ * are broken at once the one reported is the one most worth acting on: an
+ * unknown key first, because it usually means the whole archive is newer.
  *
  * `.strict()` refuses an unknown key rather than stripping it, which is what
  * stops a newer build's file round-tripping through an older one shorter than
- * it arrived. That refusal is correct and stays — but zod states it as
- * `Unrecognized key(s) in object: 'camera_height_mm'`, which is legible to
- * someone holding the schema and useless to a model railroader looking at a
- * file that will not open.
+ * it arrived. zod states it as `Unrecognized key(s) in object:
+ * 'camera_height_mm'`, which is legible to someone holding the schema and
+ * useless to a model railroader looking at a file that will not open, so that
+ * one message is reworded.
  *
- * It is worth rewording because the additive fields decided on
- * [#139](https://github.com/rails49/occupancy/issues/139) add **no version** — so
- * this, and not a version mismatch, is how a stale reader meets a newer
- * archive. A cached bundle is the ordinary way to be behind in a client-side
- * app served from one origin, and "reload the app" is the one thing the reader
- * can act on. Every future additive field inherits the wording.
+ * It is worth rewording because an additive field adds **no version**
+ * (ADR 0001) — so this, and not a version mismatch, is how a stale reader meets
+ * a newer archive. A cached bundle is the ordinary way to be behind in a
+ * client-side app served from one origin, and "reload the app" is the one thing
+ * the reader can act on. Every future additive field inherits the wording.
  *
  * The hedge is not padding: an unknown key is equally a typo in a hand-built
  * manifest, and nothing can tell the two apart.
  *
- * @throws A reworded `Error` for an unknown key; otherwise whatever zod threw.
+ * @throws FormatError for any manifest that is not valid v4.
  */
 export function parseManifest(data: unknown): ManifestData {
-  try {
-    return ManifestDataSchema.parse(data);
-  } catch (err) {
-    const unknown = unknownKeyPaths(err);
-    if (unknown.length === 0) throw err;
+  const result = ManifestDataSchema.safeParse(data);
+  if (result.success) return result.data;
+
+  const issues = result.error.issues;
+  const rule = RULE_PRIORITY.find(r => issues.some(issue => ruleOf(issue) === r)) ?? 'format/field';
+
+  if (rule === 'format/unknown-key') {
+    const unknown = issues.flatMap(issue =>
+      issue.code === 'unrecognized_keys'
+        ? issue.keys.map(key => [...issue.path, key].join('.'))
+        : [],
+    );
     const names = unknown.map(k => `\`${k}\``).join(', ');
-    throw new Error(
+    throw new FormatError(
+      rule,
       `This archive uses ${unknown.length === 1 ? 'a field' : 'fields'} this build does not ` +
         `know (${names}). It may have been written by a newer version of rails49 — reload the ` +
         `app and try again. If you hand-edited manifest.json, check the key ` +
         `${unknown.length === 1 ? 'name' : 'names'}.`,
     );
   }
-}
 
-/** Dotted paths of every key `.strict()` rejected, or `[]` for any other failure. */
-function unknownKeyPaths(err: unknown): string[] {
-  if (!(err instanceof z.ZodError)) return [];
-  return err.issues.flatMap(issue =>
-    issue.code === 'unrecognized_keys'
-      ? issue.keys.map(key => [...issue.path, key].join('.'))
-      : [],
+  throw new FormatError(
+    rule,
+    issues
+      .filter(issue => ruleOf(issue) === rule)
+      .map(issue => `${issue.path.join('.') || 'manifest'}: ${issue.message}`)
+      .join('; '),
   );
 }
 
+/** Which rule to report when a manifest breaks several. */
+const RULE_PRIORITY: readonly FormatRule[] = [
+  'format/unknown-key',
+  'format/provenance',
+  'format/duplicate-id',
+  'format/field',
+];
+
+/** The FORMAT.md rule one zod issue breaks. */
+function ruleOf(issue: z.ZodIssue): FormatRule {
+  if (issue.code === 'unrecognized_keys') return 'format/unknown-key';
+  if (issue.code === 'custom' && issue.params?.rule === 'format/duplicate-id') {
+    return 'format/duplicate-id';
+  }
+  // The label union is the only discriminated union, so a bad or missing
+  // discriminator is a bad or missing provenance.
+  if (issue.code === 'invalid_union_discriminator' || issue.path.includes('proposed_by')) {
+    return 'format/provenance';
+  }
+  return 'format/field';
+}
+
+/**
+ * Rejects anything that is not a v4 manifest object with a message that names
+ * the version, before the schema gets a chance to report it as one issue among
+ * many.
+ *
+ * @throws FormatError `format/manifest-json` if `data` is not a JSON object,
+ *         `format/version` if its `version` is not 4.
+ */
 export function assertManifestVersion(data: unknown): void {
-  const version = (data as { version?: unknown } | null)?.version;
+  if (typeof data !== 'object' || data === null || Array.isArray(data)) {
+    throw new FormatError('format/manifest-json', 'manifest.json is not a JSON object');
+  }
+  const version = (data as { version?: unknown }).version;
   if (version === MANIFEST_VERSION) return;
 
-  throw new Error(
+  throw new FormatError(
+    'format/version',
     `Unsupported manifest version ${JSON.stringify(version)}: this build reads version ` +
       `${MANIFEST_VERSION} only. There is no v3 compatibility path — v4 replaced point ` +
       `markers with cars and sensors, and no automated migration is possible because a ` +

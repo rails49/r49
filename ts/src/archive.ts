@@ -1,5 +1,6 @@
 import JSZip from 'jszip';
-import { make_id } from '@occupancy/uid';
+import { FormatError } from './errors.ts';
+import { make_id } from './uid.ts';
 import {
   parseManifest,
   assertManifestVersion,
@@ -20,21 +21,30 @@ export class R49Archive {
    * the v4 schema.
    *
    * @param data Raw archive bytes, in any form the host platform produces.
-   * @throws If the data is empty, is not a readable zip, lacks manifest.json,
-   *         carries a version other than 4, or fails v4 validation.
+   * @throws FormatError naming the rule broken: the data is empty or not a
+   *         readable zip, lacks manifest.json, carries a version other than 4,
+   *         or fails v4 validation.
    */
   static async load(data: Buffer | Blob | ArrayBuffer | Uint8Array): Promise<R49Archive> {
     const size = (data as any).byteLength ?? (data as any).size ?? 0;
     if (size === 0) {
-      throw new Error('Cannot load .r49 archive: data is empty');
+      throw new FormatError('format/zip', 'Cannot load .r49 archive: data is empty');
+    }
+    let zip: JSZip;
+    try {
+      zip = await JSZip.loadAsync(data);
+    } catch (err) {
+      throw new FormatError('format/zip', `Failed to load .r49 archive (size: ${size} bytes): ${err}`);
     }
     try {
-      const zip = await JSZip.loadAsync(data);
       const archive = new R49Archive(zip);
       await archive.readAndValidateManifest();
       return archive;
     } catch (err) {
-      throw new Error(`Failed to load .r49 archive (size: ${size} bytes): ${err}`);
+      // An entry that will not decompress is a broken zip, not a broken manifest.
+      const rule = err instanceof FormatError ? err.rule : 'format/zip';
+      const reason = err instanceof FormatError ? err.message : String(err);
+      throw new FormatError(rule, `Failed to load .r49 archive (size: ${size} bytes): ${reason}`);
     }
   }
 
@@ -45,15 +55,21 @@ export class R49Archive {
    * The version is checked first and on its own, so a v3 archive fails with a
    * message naming the version rather than with a list of shape mismatches.
    *
-   * @throws If manifest.json is absent, is not version 4, or fails validation.
+   * @throws FormatError if manifest.json is absent, is not a JSON object, is not
+   *         version 4, or fails validation.
    */
   async readAndValidateManifest(): Promise<ManifestData> {
     const manifestFile = this.zip.file('manifest.json');
     if (!manifestFile) {
-      throw new Error('manifest.json not found in archive');
+      throw new FormatError('format/manifest-missing', 'manifest.json not found in archive');
     }
     const content = await manifestFile.async('string');
-    const json = JSON.parse(content);
+    let json: unknown;
+    try {
+      json = JSON.parse(content);
+    } catch (err) {
+      throw new FormatError('format/manifest-json', `manifest.json is not JSON: ${err}`);
+    }
     assertManifestVersion(json);
     this.manifest = parseManifest(json);
     return this.manifest;
@@ -91,7 +107,7 @@ export class R49Archive {
   /**
    * Replaces the manifest, validating it against the v4 schema first.
    *
-   * @throws If the supplied data is not version 4, or fails validation.
+   * @throws FormatError if the supplied data is not version 4, or fails validation.
    */
   setManifest(data: ManifestData): void {
     assertManifestVersion(data);

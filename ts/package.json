@@ -1,22 +1,36 @@
 {
-  "name": "@occupancy/r49",
+  "name": "@rails49/r49",
   "version": "0.1.0",
+  "description": "Read, write and validate .r49 model railroad layout archives, and compute their calibration fit.",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/rails49/r49.git",
+    "directory": "ts"
+  },
   "type": "module",
   "exports": {
-    ".": "./src/index.ts"
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    },
+    "./r49.json": "./dist/r49.json"
   },
+  "files": [
+    "dist"
+  ],
   "scripts": {
+    "build": "tsc -p tsconfig.build.json",
     "test": "vitest run",
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
-    "@occupancy/config": "workspace:*",
-    "@occupancy/uid": "workspace:*",
     "jszip": "^3.10.1",
     "zod": "^3.23.8"
   },
   "devDependencies": {
-    "vitest": "^1.6.0",
-    "typescript": "^5.4.5"
+    "@types/node": "^24.9.2",
+    "typescript": "^5.7.2",
+    "vitest": "^1.6.0"
   }
 }
