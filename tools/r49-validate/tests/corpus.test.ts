@@ -1,6 +1,6 @@
 import { describe, it } from 'node:test';
 import { expect } from '../../../scripts/test/expect.ts';
-import { checkPath, handleOf, inCorpus, scopeOf } from '../src/corpus.ts';
+import { checkPath, corpusArchives, handleOf, inCorpus, scopeOf } from '../src/corpus.ts';
 
 const codes = (findings: readonly { code: string }[]) => findings.map(f => f.code);
 
@@ -16,6 +16,22 @@ describe('corpus paths', () => {
     it('leaves out the conformance cases, which are not submissions', () => {
       expect(inCorpus('conformance/cases/reject-zip-empty/archive.r49')).toBe(false);
       expect(inCorpus('west-yard.r49')).toBe(false);
+    });
+
+    it('lists its archives in order, and nothing else', () => {
+      const paths = [
+        'fixtures/simple.r49',
+        'archives/bob/a b.r49',
+        'archives/.gitkeep',
+        'conformance/cases/accept-minimal/archive.r49',
+        'archives/alice/yard/west.r49',
+        'README.md',
+      ];
+      expect(corpusArchives(paths)).toEqual([
+        'archives/alice/yard/west.r49',
+        'archives/bob/a b.r49',
+        'fixtures/simple.r49',
+      ]);
     });
   });
 

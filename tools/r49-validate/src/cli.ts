@@ -3,7 +3,7 @@ import { dirname, join } from 'node:path';
 import { parseArgs } from 'node:util';
 import { validate, type ArchiveInput } from './validate.ts';
 import { checkGuidance, guidanceTable, REFERENCE_WIDTH_PX } from './guidance.ts';
-import { handleOf, inCorpus } from './corpus.ts';
+import { CORPUS_DIRECTORIES, corpusArchives, handleOf, inCorpus } from './corpus.ts';
 import { readerDisagreements, readOutcome, type ReaderOutcome } from './readers.ts';
 import type { ArchiveReport, Report } from './report.ts';
 
@@ -35,6 +35,9 @@ r49-validate guidance --check <path>
                                   check a document's generated block against it
 r49-validate readers --python <report.json> <path>...
                                   compare read.py's outcomes with this package's
+r49-validate list [<path>...]     print the corpus archives, each ending in NUL:
+                                  those in archives/ and fixtures/, or those
+                                  among <path>...
 
 Options:
   --author <handle>   the pull request author, for the directory-ownership rule
@@ -114,6 +117,18 @@ function humanReport(report: Report): string {
 }
 
 async function main(argv: readonly string[]): Promise<number> {
+  if (argv[0] === 'list') {
+    const paths = argv.slice(1);
+    if (paths.length === 0) {
+      for (const directory of CORPUS_DIRECTORIES) {
+        const entries = await readdir(directory, { recursive: true });
+        paths.push(...entries.map(entry => join(directory, entry)));
+      }
+    }
+    for (const path of corpusArchives(paths)) process.stdout.write(`${path}\0`);
+    return 0;
+  }
+
   if (argv[0] === 'guidance') {
     const { values } = parseArgs({
       args: [...argv.slice(1)],
