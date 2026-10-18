@@ -1,0 +1,4 @@
+# The uv workspace: the published Python package and the corpus validator,
+# locked together in ./uv.lock. Nothing at this level is a package.
+[tool.uv.workspace]
+members = ["python", "tools/r49-validate"]

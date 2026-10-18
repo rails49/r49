@@ -1,0 +1,44 @@
+[project]
+name = "r49-validate"
+version = "0.1.0"
+description = "The rails49/r49 corpus validator. Unpublished; run from a checkout."
+readme = "README.md"
+license = "MIT"
+requires-python = ">=3.10"
+dependencies = ["rails49-r49"]
+classifiers = ["Private :: Do Not Upload"]
+
+[project.scripts]
+r49-validate = "r49_validate.cli:main"
+
+[tool.uv.sources]
+rails49-r49 = { workspace = true }
+
+[dependency-groups]
+dev = ["pytest>=8", "ruff>=0.6", "black>=24", "pyright>=1.1.380"]
+
+[build-system]
+requires = ["hatchling>=1.26"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/r49_validate"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py310"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "B", "UP"]
+
+[tool.black]
+line-length = 100
+target-version = ["py310"]
+
+[tool.pyright]
+include = ["src", "tests"]
+typeCheckingMode = "strict"
+pythonVersion = "3.10"

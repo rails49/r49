@@ -6,6 +6,12 @@ resolution-markers = [
     "python_full_version < '3.11'",
 ]
 
+[manifest]
+members = [
+    "r49-validate",
+    "rails49-r49",
+]
+
 [[package]]
 name = "annotated-types"
 version = "0.8.0"
@@ -83,7 +89,7 @@ name = "exceptiongroup"
 version = "1.3.1"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
-    { name = "typing-extensions", marker = "python_full_version < '3.13'" },
+    { name = "typing-extensions", marker = "python_full_version < '3.11'" },
 ]
 sdist = { url = "https://files.pythonhosted.org/packages/50/79/66800aadf48771f6b62f7eb014e352e5d06856655206165d775e675a02c9/exceptiongroup-1.3.1.tar.gz", hash = "sha256:8b412432c6055b0b7d14c310000ae93352ed6754f70fa8f7c34141f91c4e3219", size = 30371, upload-time = "2025-11-21T23:01:54.787Z" }
 wheels = [
@@ -410,9 +416,36 @@ wheels = [
 ]
 
 [[package]]
+name = "r49-validate"
+version = "0.1.0"
+source = { editable = "tools/r49-validate" }
+dependencies = [
+    { name = "rails49-r49" },
+]
+
+[package.dev-dependencies]
+dev = [
+    { name = "black" },
+    { name = "pyright" },
+    { name = "pytest" },
+    { name = "ruff" },
+]
+
+[package.metadata]
+requires-dist = [{ name = "rails49-r49", editable = "python" }]
+
+[package.metadata.requires-dev]
+dev = [
+    { name = "black", specifier = ">=24" },
+    { name = "pyright", specifier = ">=1.1.380" },
+    { name = "pytest", specifier = ">=8" },
+    { name = "ruff", specifier = ">=0.6" },
+]
+
+[[package]]
 name = "rails49-r49"
 version = "0.1.0"
-source = { editable = "." }
+source = { editable = "python" }
 dependencies = [
     { name = "pydantic" },
 ]

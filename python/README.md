@@ -44,8 +44,10 @@ MIT licensed.
 
 ## Development
 
+The package is a member of the repository's uv workspace (`../pyproject.toml`,
+locked in `../uv.lock`). From the repository root:
+
 ```sh
-uv sync
-uv run pytest
-uv run ruff check . && uv run black --check . && uv run pyright
+uv run --package rails49-r49 pytest python
+(cd python && uv run ruff check . && uv run black --check . && uv run pyright)
 ```

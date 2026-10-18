@@ -11,12 +11,12 @@ located reliably, and that is a fact about your camera and your scale, not about
 your layout. The widest strip of track that may span one frame:
 
 <!-- BEGIN GENERATED — do not edit by hand.
-     Produced in the rails49 checkout by:
-       pnpm --silent --filter @occupancy/r49-validate guidance
-     CI diffs this block against that command's output, because the minimum it
-     is derived from is provisional and will move. -->
+     Produced from the repository root by:
+       uv run --quiet --package r49-validate r49-validate guidance
+     CI diffs this block against that command's output. It is derived from
+     recommended_dpt and the scale table in data/r49.json. -->
 
-Reference frame: **1920 px** wide. Minimum DPT: **20**.
+Reference frame: **1920 px** wide. Recommended DPT: **20**.
 
 | Scale | Ratio | Track gauge | Widest track that may span the frame |
 | :--- | ---: | ---: | ---: |
@@ -28,15 +28,17 @@ Reference frame: **1920 px** wide. Minimum DPT: **20**.
 | N | 1:160 | 8.97 mm | 861 mm (0.86 m) |
 | Z | 1:220 | 6.52 mm | 626 mm (0.63 m) |
 
-Shoot a **narrower** strip than the figure for your scale and you are above the minimum;
-shoot a wider one and cars are too few pixels across to localise reliably. The numbers
-scale linearly with image width — at 3840 px they double.
+Shoot a **narrower** strip than the figure for your scale and you are above the
+recommended DPT; shoot a wider one and cars are too few pixels across to localise
+reliably. The numbers scale linearly with image width — at 3840 px they double.
 
 <!-- END GENERATED -->
 
 So for HO: about 1.6 m of track in frame, and a 4K phone roughly doubles that.
-The editor warns you when you are under the minimum, so you do not have to work
-this out in advance — but it is much easier to frame correctly than to recapture.
+The recommended DPT is a target, not a bar: CI warns below it and still accepts
+the archive. The editor warns you when you are under its own minimum, so you do
+not have to work this out in advance — but it is much easier to frame correctly
+than to recapture.
 
 **Calibrate with two points at the same height, as far apart as you can reach.**
 Both halves matter. Only points at equal height enter the fit, because under a
@@ -94,7 +96,15 @@ training as ground truth is the one loop this corpus exists to prevent.
    becomes `cars-0-10.r49`. CI blocks anything else, because spaces break the
    tooling that walks the changed files.
 2. Put it in `archives/<your-github-handle>/`.
-3. Open a pull request and confirm the three statements in the template.
+3. Optionally, check it the way CI will. From a checkout of this repository,
+   with [uv](https://docs.astral.sh/uv/) installed:
+
+   ```sh
+   uv run --package r49-validate r49-validate --author <your-handle> archives/<your-handle>/<slug>.r49
+   ```
+
+   Exit 0 means nothing blocks; warnings are printed but do not fail it.
+4. Open a pull request and confirm the three statements in the template.
 
 ### What review consists of
 
