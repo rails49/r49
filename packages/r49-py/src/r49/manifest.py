@@ -24,7 +24,7 @@ from pydantic import (
 from pydantic_core import ErrorDetails, PydanticCustomError
 
 from .data import SCALE_TO_RATIO
-from .errors import FormatRuleId, R49Error
+from .errors import FormatRule, R49Error
 
 MANIFEST_VERSION: Final = 4
 """The format version this package reads. Anything else is refused on the
@@ -211,25 +211,25 @@ class Manifest(_Strict):
 
 
 def parse_manifest(data: bytes) -> Manifest:
-    """Parse ``manifest.json`` bytes: UTF-8, then JSON, then an object, then the
-    version, then everything else, each refusal under its own rule id.
+    """Parse ``manifest.json`` bytes: UTF-8, then JSON, then the version, then
+    everything else, each refusal under its own rule id.
 
     A bare manifest is exempt from the zip and image rules; :func:`r49.load`
     applies those.
 
-    :raises R49Error: ``manifest/json``, ``manifest/version``,
+    :raises R49Error: ``manifest/not-json``, ``manifest/version``,
         ``manifest/unknown-key``, ``manifest/provenance``,
-        ``manifest/duplicate-id`` or ``manifest/field``.
+        ``manifest/duplicate-id`` or ``manifest/schema``.
     """
     try:
         # Strict: an invalid byte must not load as U+FFFD (rails49/occupancy#191).
-        # utf-8-sig, because the TypeScript reader's decoder drops a BOM too.
-        text = data.decode("utf-8-sig")
-        value: object = json.loads(text, parse_constant=_refuse_constant)
+        # json refuses a leading byte-order mark, as FORMAT.md does.
+        value: object = json.loads(data.decode("utf-8"), parse_constant=_refuse_constant)
     except ValueError as err:
-        raise R49Error("manifest/json", f"manifest.json is not UTF-8 JSON: {err}") from None
+        raise R49Error("manifest/not-json", f"manifest.json is not UTF-8 JSON: {err}") from None
+    # A JSON value that is not an object has no version 4.
     if not isinstance(value, dict):
-        raise R49Error("manifest/json", "manifest.json does not hold a JSON object")
+        value = {}
     manifest: dict[str, Any] = value  # pyright: ignore[reportUnknownVariableType]
     _assert_version(manifest)
     try:
@@ -274,7 +274,7 @@ def _refusal(err: ValidationError) -> R49Error:
     return R49Error(_rule(issues), str(err))
 
 
-def _rule(issues: list[ErrorDetails]) -> FormatRuleId:
+def _rule(issues: list[ErrorDetails]) -> FormatRule:
     def at(issue: ErrorDetails) -> object:
         return issue["loc"][-1] if issue["loc"] else None
 
@@ -282,7 +282,7 @@ def _rule(issues: list[ErrorDetails]) -> FormatRuleId:
         return "manifest/provenance"
     if any(i["type"] == "duplicate_id" for i in issues):
         return "manifest/duplicate-id"
-    return "manifest/field"
+    return "manifest/schema"
 
 
 def _dotted(issue: ErrorDetails) -> str:

@@ -9,12 +9,12 @@ from typing import Literal
 from .data import SCALE_TO_RATIO, STANDARD_GAUGE
 from .manifest import Calibration, Manifest
 
-LeftOutReason = Literal["off-reference-plane", "at-or-above-camera", "no-partner"]
+LeftOutReason = Literal["off-reference-plane", "above-camera", "no-partner"]
 """Why a reference point is not in the fit, in FORMAT.md's order:
 
 * ``off-reference-plane``: there is no camera height and the point's ``z`` is
   not the reference height.
-* ``at-or-above-camera``: the point's ``z`` is the camera height or more.
+* ``above-camera``: the point's ``z`` is the camera height or more.
 * ``no-partner``: no other point still in the fit has the same ``z``.
 """
 
@@ -42,9 +42,9 @@ class CalibrationFit:
     left_out: tuple[LeftOut, ...]
     """The points left out, by index, each with the first reason that applies."""
     camera_height_fits: bool | None
-    """None without a camera height; otherwise whether it is above the
-    reference height and above every reference point's ``z``. False is no
-    format error, but the DPT should not be trusted."""
+    """None without a camera height; otherwise whether it is above every
+    reference point's ``z``. False is no format error, but the DPT should not
+    be trusted."""
 
 
 def fit(manifest: Manifest) -> CalibrationFit:
@@ -56,7 +56,6 @@ def fit(manifest: Manifest) -> CalibrationFit:
     calibration = manifest.layout.calibration
     h = calibration.camera_height_mm
     z_ref = calibration.reference_height_mm or 0.0
-    points = calibration.points
 
     left_out, pairs = _select(calibration)
     separations = [_separations(calibration, i, j) for i, j in pairs]
@@ -80,7 +79,7 @@ def fit(manifest: Manifest) -> CalibrationFit:
 
     fits: bool | None = None
     if h is not None:
-        fits = h > z_ref and all(h > point.world.z for point in points)
+        fits = all(point.reason != "above-camera" for point in left_out)
 
     return CalibrationFit(
         dpt=dpt,
@@ -103,7 +102,7 @@ def _select(calibration: Calibration) -> tuple[list[LeftOut], list[tuple[int, in
         if h is None and point.world.z != z_ref:
             left_out[index] = "off-reference-plane"
         elif h is not None and point.world.z >= h:
-            left_out[index] = "at-or-above-camera"
+            left_out[index] = "above-camera"
 
     kept = [index for index in range(len(points)) if index not in left_out]
     pairs = [

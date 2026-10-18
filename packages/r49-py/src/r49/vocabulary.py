@@ -6,10 +6,10 @@ vocabulary is a corpus rule (FORMAT.md § Car label).
 
 from __future__ import annotations
 
-from collections.abc import Mapping, Sequence
+from collections.abc import Mapping
 from typing import Any
 
-from .data import DETECTOR_CLASSES, VOCABULARY
+from .data import VOCABULARY
 
 VocabularyNode = Mapping[str, Any]
 """One mapping in the vocabulary: subtypes by name, mixed with the node's own
@@ -41,16 +41,3 @@ def is_known_class(cls: str, vocabulary: VocabularyNode = VOCABULARY) -> bool:
             return False
         node = child
     return True
-
-
-def detector_class_index(cls: str, classes: Sequence[str] = DETECTOR_CLASSES) -> int | None:
-    """The detector class index a stored class trains as: the position of the
-    longest entry of the class list that is a segment prefix of it, or None when
-    none is. Longest, so that appending ``stock.loco`` re-maps every locomotive
-    without relabeling."""
-    index: int | None = None
-    matched = -1
-    for i, entry in enumerate(classes):
-        if is_segment_prefix(entry, cls) and len(entry) > matched:
-            index, matched = i, len(entry)
-    return index

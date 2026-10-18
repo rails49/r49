@@ -1,5 +1,6 @@
 """The reader beyond what a conformance case asserts: loading from a path, the
-bytes it hands back, the whole fit result and the vocabulary questions."""
+bytes it hands back, the image mismatches in order, the whole fit result and
+the vocabulary questions."""
 
 from __future__ import annotations
 
@@ -76,6 +77,22 @@ class TestLoad:
             r49.load(zipped({"manifest.json": b"{}", "stray.txt": b""}))
         assert refused.value.rule == "manifest/version"
 
+    def test_reports_missing_images_then_orphans(self) -> None:
+        data = {
+            "version": 4,
+            "layout": {"scale": "HO"},
+            "camera": {"resolution": {"width": 4, "height": 3}},
+            "images": [{"filename": "a.jpg"}, {"filename": "b.jpg"}],
+        }
+        archive = r49.load(
+            zipped({"manifest.json": json.dumps(data).encode(), "c.jpg": JPEG, "a.jpg": JPEG})
+        )
+        assert archive.image_mismatches() == [
+            r49.ImageMismatch("images/missing", "b.jpg"),
+            r49.ImageMismatch("images/orphan", "c.jpg"),
+        ]
+        assert r49.load(ARCHIVE).image_mismatches() == []
+
     def test_reads_class_under_its_manifest_key(self) -> None:
         label = {
             "id": "a",
@@ -111,8 +128,8 @@ class TestFit:
         points = [point(0, 0, 0), point(10, 0, 0), point(0, 10, 100), point(5, 5, 120)]
         result = r49.fit(manifest({"points": points, "camera_height_mm": 100}))
         assert result.left_out == (
-            r49.LeftOut(2, "at-or-above-camera"),
-            r49.LeftOut(3, "at-or-above-camera"),
+            r49.LeftOut(2, "above-camera"),
+            r49.LeftOut(3, "above-camera"),
         )
         assert result.camera_height_fits is False
 
@@ -127,16 +144,20 @@ class TestFit:
         result = r49.fit(manifest({"points": [point(0, 0, 3)], "reference_height_mm": 0}))
         assert result.left_out == (r49.LeftOut(0, "off-reference-plane"),)
 
-    def test_camera_height_fits_when_above_reference_and_every_point(self) -> None:
+    def test_camera_height_fits_when_above_every_point(self) -> None:
         points = [point(0, 0, 0), point(10, 0, 0)]
-        fits = r49.fit(
-            manifest({"points": points, "camera_height_mm": 1, "reference_height_mm": 0})
-        )
+        fits = r49.fit(manifest({"points": points, "camera_height_mm": 1}))
         assert fits.camera_height_fits is True
-        below = r49.fit(
+        assert r49.fit(manifest({"points": [], "camera_height_mm": 5})).camera_height_fits is True
+        below = r49.fit(manifest({"points": [point(0, 0, 230)], "camera_height_mm": 115}))
+        assert below.camera_height_fits is False
+
+    def test_has_no_dpt_with_the_camera_at_or_below_the_reference_plane(self) -> None:
+        points = [point(0, 0, 0), point(10, 0, 0)]
+        result = r49.fit(
             manifest({"points": points, "camera_height_mm": 1, "reference_height_mm": 1})
         )
-        assert (below.camera_height_fits, below.dpt) == (False, None)
+        assert (result.camera_height_fits, result.dpt) == (True, None)
 
 
 class TestVocabulary:
@@ -154,10 +175,3 @@ class TestVocabulary:
         assert r49.is_segment_prefix("stock", "stock")
         assert r49.is_segment_prefix("stock", "stock.loco")
         assert not r49.is_segment_prefix("stock", "stockyard")
-
-    def test_detector_index_is_the_longest_matching_entry(self) -> None:
-        classes = ["stock", "stock.loco"]
-        assert r49.detector_class_index("stock.loco.steam", classes) == 1
-        assert r49.detector_class_index("stock.freight", classes) == 0
-        assert r49.detector_class_index("stockyard", classes) is None
-        assert r49.detector_class_index("stock.freight") == 0

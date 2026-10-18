@@ -8,7 +8,7 @@ Read-only: nothing here writes an archive.
 """
 
 from .archive import R49Archive, load
-from .errors import FORMAT_RULE_IDS, FormatRuleId, R49Error
+from .errors import FORMAT_RULES, FormatRule, ImageMismatch, R49Error
 from .fit import CalibrationFit, LeftOut, LeftOutReason, fit
 from .manifest import (
     MANIFEST_VERSION,
@@ -30,22 +30,22 @@ from .manifest import (
 )
 from .vocabulary import (
     VocabularyNode,
-    detector_class_index,
     is_known_class,
     is_segment_prefix,
     vocabulary_subtypes,
 )
 
 __all__ = [
-    "FORMAT_RULE_IDS",
+    "FORMAT_RULES",
     "MANIFEST_VERSION",
     "VALID_SCALES",
     "Calibration",
     "CalibrationFit",
     "Camera",
     "CarLabel",
-    "FormatRuleId",
+    "FormatRule",
     "Image",
+    "ImageMismatch",
     "Layout",
     "LeftOut",
     "LeftOutReason",
@@ -60,7 +60,6 @@ __all__ = [
     "Sensor",
     "VocabularyNode",
     "WorldPoint",
-    "detector_class_index",
     "fit",
     "is_known_class",
     "is_segment_prefix",
