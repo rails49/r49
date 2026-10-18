@@ -58,8 +58,8 @@ async function build(path: string, opts: Build = {}): Promise<ArchiveInput> {
     for (let i = 0; i < count; i++) await archive.addImage(`img_${i}.jpg`, A_JPEG);
   }
   if (opts.extraEntry) await archive.addImage(opts.extraEntry, A_JPEG);
-  // addImage appends a manifest entry, which is exactly what makes it *not*
-  // orphaned — remove the entry again so the zip carries a file nothing names.
+  // addImage appends a manifest entry, so the file would not be an orphan.
+  // Remove the entry again so the zip carries a file nothing names.
   if (opts.extraEntry) {
     const manifest = archive.getManifest();
     manifest.images = manifest.images.filter(img => img.filename !== opts.extraEntry);

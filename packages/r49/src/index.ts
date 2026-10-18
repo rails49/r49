@@ -87,7 +87,7 @@ export { make_id } from './uid.ts';
 // vocabulary, and the corpus validator blocks on it. Not parse-time
 // validation — `class` stays a plain string at the format layer.
 // `isSegmentPrefix` is the rule itself, exported so a reader mapping classes
-// onto a list of its own, such as a detector's class list, matches the same way.
+// onto a list of its own matches the same way.
 export {
   isKnownClass,
   isSegmentPrefix,

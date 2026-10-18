@@ -25,7 +25,7 @@ describe('conformance cases', () => {
   const reported = new Set<string>(
     cases.flatMap(c => (c.expected.result === 'accept' ? (c.expected.image_mismatches ?? []) : [])).map(m => m.rule),
   );
-  const imageRules = ['images/missing', 'images/orphan'];
+  const imageRules: string[] = FORMAT_RULES.filter(rule => rule.startsWith('images/'));
 
   it('reject every format rule id at least once, except the two image rules', () => {
     expect(FORMAT_RULES.filter(rule => !imageRules.includes(rule) && !rejected.has(rule))).toEqual([]);
@@ -33,7 +33,7 @@ describe('conformance cases', () => {
 
   it('report each image rule at least once, and never reject on one', () => {
     expect(imageRules.filter(rule => !reported.has(rule))).toEqual([]);
-    expect([...rejected].filter(rule => rule.startsWith('images/'))).toEqual([]);
+    expect([...rejected].filter(rule => imageRules.includes(rule))).toEqual([]);
   });
 
   it('name only format rule ids', () => {
