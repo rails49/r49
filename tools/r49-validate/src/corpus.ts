@@ -2,7 +2,7 @@ import type { Finding, Scope } from './report.ts';
 
 /**
  * The corpus's own rules about *where* a file sits — as opposed to what is
- * inside it. Settled in issue #56.
+ * inside it. Settled in rails49/occupancy#56; FORMAT.md § Corpus rules states them.
  *
  * These live in the validator rather than in the workflow so that a path
  * violation lands in the same report as everything else: the summary table is a
@@ -32,7 +32,7 @@ function segments(path: string): string[] {
  * Which bar this path is held to.
  *
  * `fixtures/` sits outside `archives/` deliberately: the six are zero-label and
- * below `min_dpt`, so they satisfy neither half of what the corpus is for, and
+ * below the recommended DPT, so they satisfy neither half of what the corpus is for, and
  * a consumer's default glob of `archives/**` must not silently ingest them.
  */
 export function scopeOf(path: string): Scope {
@@ -52,7 +52,7 @@ export function handleOf(path: string): string | null {
 }
 
 /**
- * Check 7 — the path rules.
+ * The path rules: `path/shape`, `path/slug` and `path/owner`.
  *
  * @param path Repo-relative path of the submitted file.
  * @param author The PR author's handle, or `null` when unknown (a local run).
@@ -69,7 +69,7 @@ export function checkPath(path: string, author: string | null): Finding[] {
       message:
         `${path} is not a place the corpus defines. A submission goes in ` +
         `archives/<your-github-handle>/<slug>.r49; fixtures/<slug>.r49 is reserved for the ` +
-        `six archives that came from rails49.`,
+        `six archives that came from rails49/occupancy.`,
     });
     return findings;
   }

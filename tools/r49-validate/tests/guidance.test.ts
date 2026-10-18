@@ -1,10 +1,14 @@
 import { describe, it, expect } from 'vitest';
-import { MIN_DPT, SCALES, SCALE_TO_RATIO, STANDARD_GAUGE } from '@occupancy/config';
+import { readFileSync } from 'node:fs';
+import { VALID_SCALES } from '@rails49/r49';
 import {
   checkGuidance,
   extractGeneratedBlock,
+  gaugeMM,
   guidanceTable,
+  GUIDANCE_COMMAND,
   maxFrameMM,
+  RECOMMENDED_DPT,
   REFERENCE_WIDTH_PX,
 } from '../src/guidance.ts';
 
@@ -16,8 +20,8 @@ function document(block: string): string {
     'The widest strip of track that may span one frame:',
     '',
     '<!-- BEGIN GENERATED — do not edit by hand.',
-    '     Produced in the rails49 checkout by:',
-    '       pnpm --silent --filter @occupancy/r49-validate guidance',
+    '     Produced at the root of this repository by:',
+    `       ${GUIDANCE_COMMAND}`,
     '     CI diffs this block against that command output. -->',
     '',
     block,
@@ -30,13 +34,13 @@ function document(block: string): string {
 
 describe('capture guidance', () => {
   it('derives the frame width from the same arithmetic getDPT uses', () => {
-    // DPT = px_per_mm × gauge_mm, so the widest frame that still clears
-    // MIN_DPT is width_px × gauge_mm / MIN_DPT. Asserted against the identity
-    // rather than against a number, so a change to MIN_DPT moves both sides.
-    for (const scale of SCALES) {
-      const gaugeMM = STANDARD_GAUGE / SCALE_TO_RATIO[scale];
+    // DPT = px_per_mm × gauge_mm, so the widest frame that still reaches
+    // the recommended DPT is width_px × gauge_mm / RECOMMENDED_DPT. Asserted
+    // against the identity rather than against a number, so a change to the
+    // recommended DPT moves both sides.
+    for (const scale of VALID_SCALES) {
       const frameMM = maxFrameMM(scale, 1920);
-      expect((1920 / frameMM) * gaugeMM).toBeCloseTo(MIN_DPT, 10);
+      expect((1920 / frameMM) * gaugeMM(scale)).toBeCloseTo(RECOMMENDED_DPT, 10);
     }
   });
 
@@ -49,17 +53,21 @@ describe('capture guidance', () => {
     expect(guidanceTable(4032)).toContain('4032 px');
   });
 
-  it('names the minimum DPT the numbers were computed against', () => {
-    expect(guidanceTable()).toContain(String(MIN_DPT));
+  it('names the recommended DPT the numbers were computed against', () => {
+    expect(guidanceTable()).toContain(`**${RECOMMENDED_DPT}**`);
   });
 
-  it('emits one row per scale, in the order config.yaml defines them', () => {
+  it('reads the recommended DPT from data.json, where it is 20', () => {
+    expect(RECOMMENDED_DPT).toBe(20);
+  });
+
+  it('emits one row per scale, in the order data.json defines them', () => {
     const rows = guidanceTable()
       .split('\n')
       .filter(line => line.startsWith('| ') && !line.startsWith('| Scale') && !line.startsWith('| :'));
 
-    expect(rows).toHaveLength(SCALES.length);
-    expect(rows.map(row => row.split('|')[1].trim())).toEqual([...SCALES]);
+    expect(rows).toHaveLength(VALID_SCALES.length);
+    expect(rows.map(row => row.split('|')[1].trim())).toEqual([...VALID_SCALES]);
   });
 
   it('is byte-identical across calls, since CI diffs it against committed prose', () => {
@@ -100,8 +108,9 @@ describe('the generated block', () => {
   });
 
   it('fails a table generated for a different width', () => {
-    // The stand-in for the real failure: MIN_DPT moving in rails49 while the
-    // corpus still carries the old numbers. Width is the input a test can move.
+    // The stand-in for the real failure: the recommended DPT moving in
+    // data.json while CONTRIBUTING.md still carries the old numbers. Width is
+    // the input a test can move.
     expect(checkGuidance(document(guidanceTable(4032))).ok).toBe(false);
   });
 
@@ -111,12 +120,13 @@ describe('the generated block', () => {
   });
 
   it('tells a contributor the failure is probably not theirs, and how to fix it', () => {
-    // The message is the deliverable here: the usual cause is a change in a
-    // repository the person reading it has never touched.
+    // The message is the deliverable here: the usual cause is a change to a
+    // file the person reading it has never touched.
     const { message } = checkGuidance(document(guidanceTable(4032)));
     expect(message).toContain('not about your submission');
-    expect(message).toContain('layout.min_dpt');
-    expect(message).toContain('pnpm --silent --filter @occupancy/r49-validate guidance');
+    expect(message).toContain('recommended_dpt');
+    expect(message).toContain('packages/r49/src/data.json');
+    expect(message).toContain('pnpm --silent --filter @rails49/r49-validate guidance');
     expect(message).toContain('CONTRIBUTING.md');
   });
 
@@ -124,5 +134,17 @@ describe('the generated block', () => {
     const { ok, message } = checkGuidance('# Contributing\n\nnothing generated here.\n');
     expect(ok).toBe(false);
     expect(message).toContain(guidanceTable());
+  });
+});
+
+describe("this repository's CONTRIBUTING.md", () => {
+  it('carries the table the recommended DPT produces', () => {
+    // The recommended DPT took over from rails49/occupancy's min_dpt at the
+    // same value, so the committed table did not move.
+    const contributing = readFileSync(new URL('../../../CONTRIBUTING.md', import.meta.url), 'utf8');
+    expect(checkGuidance(contributing)).toEqual({
+      ok: true,
+      message: 'The capture-guidance table is up to date.',
+    });
   });
 });

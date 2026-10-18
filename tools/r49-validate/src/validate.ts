@@ -1,12 +1,12 @@
-import { R49Archive, getDPT, getDPTResidual, isKnownClass } from '@occupancy/r49';
-import { MIN_DPT } from '@occupancy/config';
+import { R49Archive, R49Error, getDPT, getDPTResidual, isKnownClass } from '@rails49/r49';
 import { checkPath, handleOf, scopeOf } from './corpus.ts';
 import { obliquityOf, pointsOffReferencePlane } from './geometry.ts';
+import { RECOMMENDED_DPT } from './guidance.ts';
 import { isOk, type ArchiveReport, type Finding, type Report } from './report.ts';
 
 /**
- * What CI asserts about a corpus submission — issue #57's seven blocking
- * checks and three warnings, over archives already read into memory.
+ * What CI asserts about a corpus submission — FORMAT.md § Corpus rules, its
+ * blocking rules and its warnings — over archives already read into memory.
  *
  * Pure by construction: bytes in, report out, no filesystem and no process.
  * `cli.ts` does the reading and the exiting. That is what lets every check be
@@ -29,7 +29,7 @@ export interface ValidateOptions {
   readonly author?: string | null;
   /**
    * Archives already in the corpus that share a contributor directory with
-   * something submitted. Read for their ids alone, to catch check 6.
+   * something submitted. Read for their ids alone, for `archive/id-collision`.
    *
    * Scoped to the author's own directory rather than the whole corpus: the only
    * realistic collision is a contributor who re-downloaded, saved, and *added* a
@@ -60,36 +60,7 @@ function facts(archive: R49Archive): Omit<ArchiveReport, 'path' | 'scope' | 'err
   };
 }
 
-/** Check 2 — the manifest and the zip must name the same images, both ways. */
-function checkImages(archive: R49Archive): Finding[] {
-  const declared = archive.getManifest().images.map(img => img.filename);
-  const present = new Set(archive.listEntries());
-  const findings: Finding[] = [];
-
-  for (const filename of declared) {
-    if (!present.has(filename)) {
-      findings.push({
-        code: 'images/missing',
-        message: `The manifest names ${filename}, but the archive contains no such file.`,
-      });
-    }
-  }
-
-  const referenced = new Set(declared);
-  for (const entry of present) {
-    if (entry === 'manifest.json' || referenced.has(entry)) continue;
-    findings.push({
-      code: 'images/orphan',
-      message:
-        `${entry} is in the archive but no manifest entry references it. ` +
-        `An unreferenced image is weight the corpus carries in git forever.`,
-    });
-  }
-
-  return findings;
-}
-
-/** Checks 3 and 4 — what a label may claim, and what it may be called. */
+/** `labels/provenance` and `labels/class` — what a label may claim, and what it may be called. */
 function checkLabels(archive: R49Archive): Finding[] {
   const findings: Finding[] = [];
 
@@ -110,7 +81,7 @@ function checkLabels(archive: R49Archive): Finding[] {
           code: 'labels/class',
           message:
             `${image.filename}: label ${label.id} has class "${label.class}", which is not in ` +
-            `the vocabulary (detector.vocabulary in rails49's config.yaml). If your rolling ` +
+            `the vocabulary (FORMAT.md § The vocabulary). If your rolling ` +
             `stock genuinely is not representable, please open an issue — the vocabulary is ` +
             `meant to grow.`,
         });
@@ -127,7 +98,7 @@ function qualityWarnings(archive: R49Archive, f: ReturnType<typeof facts>): Find
 
   // Deliberately *not* a warning: a missing camera height. It would fire on
   // every submission from day one, fixtures included, and a warning that always
-  // fires devalues the ones that mean something (#139). The editor is where the
+  // fires devalues the ones that mean something (rails49/occupancy#139). The editor is where the
   // height is required; here it is a fact in the table. This narrower condition
   // is the one place the fit silently means something other than the
   // contributor intends.
@@ -151,12 +122,13 @@ function qualityWarnings(archive: R49Archive, f: ReturnType<typeof facts>): Find
         `about this archive can be checked. Add two calibration points at known, differing ` +
         `world coordinates in the editor.`,
     });
-  } else if (f.dpt < MIN_DPT) {
+  } else if (f.dpt < RECOMMENDED_DPT) {
     warnings.push({
       code: 'calibration/dpt',
       message:
-        `DPT is ${f.dpt.toFixed(1)}, below the ${MIN_DPT} a car needs to be localised ` +
-        `reliably. Move the camera closer or frame a shorter stretch of track.`,
+        `DPT is ${f.dpt.toFixed(1)}, below the recommended ${RECOMMENDED_DPT}. The archive is ` +
+        `accepted, but a reader that needs more may leave it out. Move the camera closer or ` +
+        `frame a shorter stretch of track.`,
     });
   }
 
@@ -207,7 +179,7 @@ async function idOf(input: ArchiveInput): Promise<string | null> {
 }
 
 /**
- * Check 6 — two archives in one contributor directory must not share an id.
+ * `archive/id-collision` — two archives in one contributor directory must not share an id.
  *
  * Compares each submission against its already-committed siblings *and* against
  * the other submissions in the same directory, since a single pull request can
@@ -222,7 +194,7 @@ async function idCollisions(
   const committed = new Map<string, string>();
   for (const sibling of siblings) {
     const id = await idOf(sibling);
-    if (id !== null) committed.set(`${handleOf(sibling.path)} ${id}`, sibling.path);
+    if (id !== null) committed.set(`${handleOf(sibling.path)}\0${id}`, sibling.path);
   }
 
   const seen = new Map<string, string>();
@@ -230,7 +202,7 @@ async function idCollisions(
     const handle = handleOf(input.path);
     if (id === null || handle === null) continue;
 
-    const key = `${handle} ${id}`;
+    const key = `${handle}\0${id}`;
     const clash = committed.get(key) ?? seen.get(key);
     if (clash !== undefined && clash !== input.path) {
       byPath.set(input.path, [
@@ -252,9 +224,9 @@ async function idCollisions(
 /**
  * Validate a set of submitted archives.
  *
- * `fixtures/` is held to a thinner bar — the archive loads, and the manifest
- * and the zip agree about images — and gets **no warnings at all**. The six are
- * known to be zero-label and below `min_dpt` by design, so annotating that on
+ * `fixtures/` is held to a thinner bar — the format rules, `path/shape` and
+ * `path/slug` — and gets **no warnings at all**. The six are known to be
+ * zero-label and below the recommended DPT by design, so annotating that on
  * every pull request would be pure noise, and they carry no ids to check.
  */
 export async function validate(
@@ -274,22 +246,22 @@ export async function validate(
     try {
       archive = await R49Archive.load(input.bytes);
     } catch (err) {
-      // Check 1, and with it five of the ticket's candidates: an empty file, an
-      // unreadable zip, a missing manifest.json, a version other than 4, a
-      // schema-invalid manifest, and duplicate ids within a collection all
-      // arrive here, because load() already refuses every one of them.
+      // Every format rule, the image rules among them, is load()'s to refuse,
+      // and a refusal is reported under the id of the rule broken. Anything
+      // else thrown is a bug, not a verdict on the archive, and fails the tool.
+      if (!(err instanceof R49Error)) throw err;
       reports.set(
         input.path,
         unloadable(input.path, {
-          code: 'archive/load',
-          message: `${input.path} could not be read as a v4 .r49 archive: ${err}`,
+          code: err.rule,
+          message: `${input.path} breaks the format rule ${err.rule}: ${err.message}`,
         })
       );
       continue;
     }
 
     const f = facts(archive);
-    const errors: Finding[] = [...checkPath(input.path, author), ...checkImages(archive)];
+    const errors: Finding[] = [...checkPath(input.path, author)];
     const warnings: Finding[] = [];
 
     if (scope !== 'fixtures') {

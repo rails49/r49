@@ -1,24 +1,33 @@
-import { MIN_DPT, SCALES, SCALE_TO_RATIO, STANDARD_GAUGE } from '@occupancy/config';
+import { VALID_SCALES, type ValidScales } from '@rails49/r49';
+import data from '@rails49/r49/data.json' with { type: 'json' };
 
 /**
- * The capture-guidance table `CONTRIBUTING.md` carries in the corpus repo:
- * the widest strip of track that may span a reference frame and still clear
- * `min_dpt`.
+ * The capture-guidance table `CONTRIBUTING.md` carries: the widest strip of
+ * track that may span a reference frame and still reach the recommended DPT.
  *
- * **Printed, never typed.** `layout.min_dpt` is provisional — set without
- * rigorous analysis, likely to move, possibly to differ per model — so a table
- * hand-written into a document in another repository would be `min_dpt` living
- * in two places with nothing checking that they agree. The corpus workflow
- * diffs the committed prose against this output, which is why it is emitted in
- * a fixed column order with fixed rounding: a diff against prose is only useful
- * when the output is deterministic.
+ * **Printed, never typed.** The recommended DPT lives in `@rails49/r49`'s
+ * `data.json`, beside the scale table it is computed with, so a table
+ * hand-written into `CONTRIBUTING.md` would be that number living in two places
+ * with nothing checking that they agree. CI diffs the committed prose against
+ * this output, which is why it is emitted in a fixed column order with fixed
+ * rounding: a diff against prose is only useful when the output is
+ * deterministic.
  *
  * ```
  * DPT          = px_per_mm × gauge_mm
- * gauge_mm     = STANDARD_GAUGE / SCALE_TO_RATIO[scale]
- * max_frame_mm = width_px × gauge_mm / MIN_DPT
+ * gauge_mm     = standard_gauge_mm / scale_ratios[scale]
+ * max_frame_mm = width_px × gauge_mm / recommended_dpt
  * ```
  */
+
+/** The DPT the corpus asks contributors to reach. A submission below it is warned, never refused. */
+export const RECOMMENDED_DPT: number = data.recommended_dpt;
+
+/** The prototype's standard gauge in mm. */
+const STANDARD_GAUGE: number = data.standard_gauge_mm;
+
+/** Scale name to reduction ratio (HO is 1:87). */
+const SCALE_TO_RATIO: Readonly<Record<ValidScales, number>> = data.scale_ratios;
 
 /**
  * The reference frame the committed table is computed for.
@@ -32,9 +41,13 @@ import { MIN_DPT, SCALES, SCALE_TO_RATIO, STANDARD_GAUGE } from '@occupancy/conf
 export const REFERENCE_WIDTH_PX = 1920;
 
 /** The widest strip of track, in mm, that may span a frame of `widthPx`. */
-export function maxFrameMM(scale: keyof typeof SCALE_TO_RATIO, widthPx: number): number {
-  const gaugeMM = STANDARD_GAUGE / SCALE_TO_RATIO[scale];
-  return (widthPx * gaugeMM) / MIN_DPT;
+export function maxFrameMM(scale: ValidScales, widthPx: number): number {
+  return (widthPx * gaugeMM(scale)) / RECOMMENDED_DPT;
+}
+
+/** The track gauge in mm at a scale. */
+export function gaugeMM(scale: ValidScales): number {
+  return STANDARD_GAUGE / SCALE_TO_RATIO[scale];
 }
 
 /**
@@ -47,17 +60,16 @@ export function maxFrameMM(scale: keyof typeof SCALE_TO_RATIO, widthPx: number):
  */
 export function guidanceTable(widthPx: number = REFERENCE_WIDTH_PX): string {
   const lines = [
-    `Reference frame: **${widthPx} px** wide. Minimum DPT: **${MIN_DPT}**.`,
+    `Reference frame: **${widthPx} px** wide. Minimum DPT: **${RECOMMENDED_DPT}**.`,
     '',
     '| Scale | Ratio | Track gauge | Widest track that may span the frame |',
     '| :--- | ---: | ---: | ---: |',
   ];
 
-  for (const scale of SCALES) {
-    const gaugeMM = STANDARD_GAUGE / SCALE_TO_RATIO[scale];
+  for (const scale of VALID_SCALES) {
     const frameMM = maxFrameMM(scale, widthPx);
     lines.push(
-      `| ${scale} | 1:${SCALE_TO_RATIO[scale]} | ${gaugeMM.toFixed(2)} mm | ` +
+      `| ${scale} | 1:${SCALE_TO_RATIO[scale]} | ${gaugeMM(scale).toFixed(2)} mm | ` +
         `${frameMM.toFixed(0)} mm (${(frameMM / 1000).toFixed(2)} m) |`
     );
   }
@@ -73,7 +85,7 @@ export function guidanceTable(widthPx: number = REFERENCE_WIDTH_PX): string {
 }
 
 /**
- * The markers the corpus's `CONTRIBUTING.md` wraps the generated block in.
+ * The markers `CONTRIBUTING.md` wraps the generated block in.
  *
  * The opening marker sits inside an HTML comment that also carries the command
  * that produces the block, so it spans several lines; the block itself starts
@@ -81,6 +93,9 @@ export function guidanceTable(widthPx: number = REFERENCE_WIDTH_PX): string {
  */
 const GENERATED_BEGIN = 'BEGIN GENERATED';
 const GENERATED_END = 'END GENERATED';
+
+/** The command that prints the block, as the failure message and `CONTRIBUTING.md` quote it. */
+export const GUIDANCE_COMMAND = 'pnpm --silent --filter @rails49/r49-validate guidance';
 
 /** CRLF and trailing spaces are noise; a Windows contributor must not fail on them. */
 function normalise(text: string): string {
@@ -125,9 +140,9 @@ export function extractGeneratedBlock(markdown: string): string | null {
  * It lives here, and not in the workflow's YAML, for the reason `corpus.ts`
  * gives about the path rules: `pnpm test` covers this and a workflow's YAML is
  * never covered by anything. The wording matters more here than anywhere else
- * in the tool, because the usual cause of a failure is `min_dpt` moving in
- * `rails49` — a repository the contributor reading the message has never
- * touched.
+ * in the tool, because the usual cause of a failure is the recommended DPT or
+ * the scale table moving in `data.json` — a file the contributor reading the
+ * message never touched.
  */
 export function checkGuidance(
   markdown: string,
@@ -142,7 +157,7 @@ export function checkGuidance(
       message:
         `The generated capture-guidance block is missing or malformed: no "${GENERATED_BEGIN}" ` +
         `comment, no closing "${GENERATED_END}", or the two in the wrong order. The block is ` +
-        `derived from rails49's layout.min_dpt and must not be deleted — restore the markers ` +
+        `derived from the recommended DPT and must not be deleted — restore the markers ` +
         `and put this between them:\n\n${expected}\n`,
     };
   }
@@ -156,11 +171,11 @@ export function checkGuidance(
     message:
       `The capture-guidance table is out of date.\n\n` +
       `**This is almost certainly not about your submission.** The table is derived from ` +
-      `layout.min_dpt in rails49, and the corpus validates against rails49 at main — so a ` +
-      `change there makes the next pull request here red no matter what it touched. The fix ` +
-      `is one command, and a maintainer can do it if you would rather not.\n\n` +
-      `In a rails49 checkout, run:\n\n` +
-      `    pnpm --silent --filter @occupancy/r49-validate guidance\n\n` +
+      `recommended_dpt and the scale table in packages/r49/src/data.json, so a change there ` +
+      `makes the next pull request red no matter what it touched. The fix is one command, ` +
+      `and a maintainer can do it if you would rather not.\n\n` +
+      `At the root of this repository, run:\n\n` +
+      `    ${GUIDANCE_COMMAND}\n\n` +
       `and paste its output between the generated-block markers in CONTRIBUTING.md.\n\n` +
       `Expected:\n\n${expected}\n\nFound:\n\n${found}\n`,
   };

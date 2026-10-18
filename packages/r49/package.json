@@ -8,7 +8,8 @@
     ".": {
       "types": "./dist/index.d.ts",
       "import": "./dist/index.js"
-    }
+    },
+    "./data.json": "./dist/data.json"
   },
   "files": [
     "dist"

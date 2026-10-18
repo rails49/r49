@@ -1,4 +1,4 @@
-import type { ManifestData } from '@occupancy/r49';
+import type { ManifestData } from '@rails49/r49';
 
 /**
  * A prototype freight car's height above railhead over its width — the only
@@ -28,7 +28,7 @@ export interface Obliquity {
  *
  * **Reported, never thresholded.** The geometry is quantified but its cost to
  * detection accuracy is unmeasured, so a bar here would be a number nothing
- * earned — the `dptResidual` precedent, and the substitute gate `SPEC.md`
+ * earned — the `dptResidual` precedent, and the substitute gate rails49/occupancy's `SPEC.md`
  * § Accuracy warns against.
  *
  * Two approximations, both stated because neither is checkable from an archive:
