@@ -20,12 +20,17 @@ LeftOutReason = Literal["off-reference-plane", "above-camera", "no-partner"]
 
 
 @dataclass(frozen=True)
-class LeftOut:
+class LeftOutPoint:
     """A reference point the fit does not use."""
 
     index: int
     """The point's index in ``calibration.points``."""
     reason: LeftOutReason
+
+
+CalibrationPair = tuple[int, int]
+"""A pair the fit uses, by the indexes of its two points in
+``calibration.points``, the lower first."""
 
 
 @dataclass(frozen=True)
@@ -37,9 +42,9 @@ class CalibrationFit:
     or a camera height at or below the reference height."""
     residual: float | None
     """The RMS residual in image pixels, or None with fewer than two pairs."""
-    pairs: tuple[tuple[int, int], ...]
-    """The pairs used, each by the indexes of its two points, the lower first."""
-    left_out: tuple[LeftOut, ...]
+    pairs: tuple[CalibrationPair, ...]
+    """The pairs used."""
+    left_out: tuple[LeftOutPoint, ...]
     """The points left out, by index, each with the first reason that applies."""
     camera_height_fits: bool | None
     """None without a camera height; otherwise whether it is above every
@@ -47,7 +52,7 @@ class CalibrationFit:
     be trusted."""
 
 
-def fit(manifest: Manifest) -> CalibrationFit:
+def calibration_fit(manifest: Manifest) -> CalibrationFit:
     """Fit the layout's scale through its reference points.
 
     ``d_mm²`` weighting trusts long baselines more; heights compare exactly,
@@ -90,7 +95,7 @@ def fit(manifest: Manifest) -> CalibrationFit:
     )
 
 
-def _select(calibration: Calibration) -> tuple[list[LeftOut], list[tuple[int, int]]]:
+def _select(calibration: Calibration) -> tuple[list[LeftOutPoint], list[CalibrationPair]]:
     """The points left out and the pairs: every unordered pair of the rest that
     shares a ``z``."""
     h = calibration.camera_height_mm
@@ -116,7 +121,7 @@ def _select(calibration: Calibration) -> tuple[list[LeftOut], list[tuple[int, in
         if index not in paired:
             left_out[index] = "no-partner"
 
-    return [LeftOut(index, left_out[index]) for index in sorted(left_out)], pairs
+    return [LeftOutPoint(index, left_out[index]) for index in sorted(left_out)], pairs
 
 
 def _separations(calibration: Calibration, i: int, j: int) -> tuple[float, float]:

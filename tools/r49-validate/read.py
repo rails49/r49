@@ -29,7 +29,7 @@ def outcome(path: str) -> dict[str, Any]:
             "residual": None,
             "imageMismatches": [],
         }
-    result = r49.fit(archive.manifest)
+    result = r49.calibration_fit(archive.manifest)
     return {
         "path": path,
         "result": "accept",

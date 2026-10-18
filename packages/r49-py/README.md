@@ -27,7 +27,7 @@ archive = r49.load("layout.r49")          # a path, or the archive's bytes
 manifest = archive.manifest
 print(manifest.layout.name, manifest.layout.scale)
 
-result = r49.fit(manifest)
+result = r49.calibration_fit(manifest)
 print(result.dpt, result.residual)        # None where the fit cannot answer
 for left_out in result.left_out:
     print(left_out.index, left_out.reason)

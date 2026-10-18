@@ -49,7 +49,7 @@ def judge(case: Path) -> Outcome:
             parsed = r49.parse_manifest(manifest.read_bytes())
     except r49.R49Error as err:
         return Outcome("reject", rule=err.rule)
-    result = r49.fit(parsed)
+    result = r49.calibration_fit(parsed)
     return Outcome("accept", dpt=result.dpt, residual=result.residual, image_mismatches=mismatches)
 
 
