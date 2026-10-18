@@ -434,9 +434,12 @@ export function parseManifestBytes(bytes: Uint8Array): ManifestData {
  * It is worth rewording because the additive fields decided on
  * [rails49/occupancy#139](https://github.com/rails49/occupancy/issues/139) add **no version** — so
  * this, and not a version mismatch, is how a stale reader meets a newer
- * archive. A cached bundle is the ordinary way to be behind in a client-side
- * app served from one origin, and "reload the app" is the one thing the reader
- * can act on. Every future additive field inherits the wording.
+ * archive, and a newer version of this package is what lets it load. Every
+ * future additive field inherits the wording.
+ *
+ * It names no program, because this package does not know who called it. A
+ * caller with something more specific to say — the editor's "reload the app" —
+ * words its own message from the rule id (rails49/r49#17).
  *
  * The hedge is not padding: an unknown key is equally a typo in a hand-built
  * manifest, and nothing can tell the two apart.
@@ -456,10 +459,10 @@ export function parseManifest(data: unknown): ManifestData {
     const names = unknown.map(k => `\`${k}\``).join(', ');
     throw new R49Error(
       'manifest/unknown-key',
-      `This archive uses ${unknown.length === 1 ? 'a field' : 'fields'} this build does not ` +
-        `know (${names}). It may have been written by a newer version of rails49 — reload the ` +
-        `app and try again. If you hand-edited manifest.json, check the key ` +
-        `${unknown.length === 1 ? 'name' : 'names'}.`,
+      `This archive uses ${unknown.length === 1 ? 'a field' : 'fields'} this version of ` +
+        `@rails49/r49 does not know (${names}). It may have been written for a newer version ` +
+        `of the .r49 format, which a newer version of @rails49/r49 can read. If manifest.json ` +
+        `was edited by hand, check the key ${unknown.length === 1 ? 'name' : 'names'}.`,
     );
   }
   throw new R49Error(issueRule(result.error.issues), result.error.message);
