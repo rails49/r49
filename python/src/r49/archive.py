@@ -6,6 +6,7 @@ import io
 import json
 import os
 import zipfile
+import zlib
 from typing import Any
 
 from . import errors
@@ -67,6 +68,6 @@ def load(source: bytes | str | os.PathLike[str]) -> Archive:
             raise FormatError(
                 errors.MANIFEST_MISSING, "manifest.json not found in archive"
             ) from None
-    except (zipfile.BadZipFile, zipfile.LargeZipFile, EOFError, OSError) as err:
+    except (zipfile.BadZipFile, zipfile.LargeZipFile, zlib.error, EOFError, OSError) as err:
         raise FormatError(errors.ZIP, f"Not a readable .r49 archive: {err}") from None
     return Archive(zip_file, manifest_from_json(raw))
