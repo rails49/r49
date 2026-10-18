@@ -1,5 +1,7 @@
 # r49
 
+gate: ./scripts/check.sh
+
 ## Agent skills
 
 ### Issue tracker
