@@ -1,81 +1,103 @@
 # r49
 
-The `.r49` layout archive format, and the corpus of archives that follow it. Terms are copied from [rails49/occupancy's `CONTEXT.md`](https://github.com/rails49/occupancy/blob/main/CONTEXT.md), which keeps the terms this repository does not need (detector, sensor states, drift and so on). [`FORMAT.md`](FORMAT.md) defines the format itself.
+The `.r49` layout archive format, and the corpus of archives that follow it. [`FORMAT.md`](FORMAT.md) defines the format.
 
 ## Language
 
 ### Archive and corpus
 
+**Layout**:
+A model railroad, seen from one camera position. An archive holds one. See [FORMAT § `layout`](FORMAT.md#layout).
+_Avoid_: scene
+
 **Archive**:
-A `.r49` file holding one layout's images, calibration, sensors and car labels.
+A `.r49` file holding one layout's images, calibration, sensors and car labels. See [FORMAT § The archive](FORMAT.md#the-archive).
 _Avoid_: project, dataset
 
 **Format**:
-The rules every archive follows, independent of any program that reads or writes one.
+The rules every archive follows, independent of any program that reads or writes one. See [FORMAT.md](FORMAT.md).
 _Avoid_: schema (for the rules themselves)
 
 **Outside reader**:
-A program that reads archives and is not part of this project, such as someone else's model trained on the corpus.
+A program that reads archives and is not part of this project, such as someone else's model trained on the corpus. See [ADR 0018](docs/adr/0018-the-r49-format-is-defined-in-rails49-r49.md).
 _Avoid_: consumer, classifier
 
 **Corpus**:
-The archives contributed to `rails49/r49`, which training draws from.
+The archives contributed to `rails49/r49`, which training draws from. See [README](README.md).
 
 **Corpus rule**:
-A requirement an archive must meet to be accepted into the corpus, beyond the format. Corpus rules keep archives consistent with each other, such as every class being in the vocabulary.
+A requirement an archive must meet to be accepted into the corpus, beyond the format. See [FORMAT § Corpus rules](FORMAT.md#corpus-rules).
 
 **Reader requirement**:
-A condition one reader places on the archives it uses, such as a minimum DPT. The corpus may report it but never enforces it.
+A condition one reader places on the archives it uses, such as a minimum DPT. See [FORMAT § Reader requirements](FORMAT.md#reader-requirements).
 
 **Recommended DPT**:
-The DPT the corpus asks contributors to reach. A submission below it is warned, never refused. Set by the corpus, separately from any reader's minimum DPT.
+The DPT the corpus asks contributors to reach. See [FORMAT § The recommended DPT](FORMAT.md#the-recommended-dpt).
 
 **Image**:
-One photograph of the layout in an archive.
+One photograph of the layout in an archive. See [FORMAT § Image](FORMAT.md#image).
 _Avoid_: frame (for a stored image; a frame is one picture from the live camera)
 
+**Sensor**:
+A point on the layout where occupancy must be reported. See [FORMAT § Sensor](FORMAT.md#sensor).
+_Avoid_: detector, block, marker
+
 **Scale**:
-The modelling scale of a layout (HO, N, Z, ...), which fixes its ratio to the prototype.
+The modelling scale of a layout (HO, N, Z, ...), which fixes its ratio to the prototype. See [FORMAT § Scales and gauge](FORMAT.md#scales-and-gauge).
+
+**Prototype**:
+The real railway a model represents. See [FORMAT § Scales and gauge](FORMAT.md#scales-and-gauge).
 
 ### Calibration
 
 **Calibration**:
-The reference points that fix a layout's DPT.
+The reference points that fix a layout's DPT. See [FORMAT § `layout.calibration`](FORMAT.md#layoutcalibration).
 
 **Reference point**:
-A point given both as an image position and as a layout position in millimetres.
+A point given both as an image position and as a layout position in millimetres. See [FORMAT § `layout.calibration`](FORMAT.md#layoutcalibration).
 _Avoid_: control point, calibration marker
 
 **Camera height**:
-The distance from layout zero up to the camera.
+The distance from layout zero up to the camera. See [FORMAT § `layout.calibration`](FORMAT.md#layoutcalibration).
 
 **Reference height**:
-The height of the railhead above layout zero; the plane DPT is reported on.
+The height of the railhead above layout zero; the plane DPT is reported on. See [FORMAT § `layout.calibration`](FORMAT.md#layoutcalibration).
 
 **DPT**:
-Dots per track: image pixels per track gauge, measured on the reference plane.
+Dots per track: image pixels per track gauge, measured on the reference plane. See [FORMAT § The calibration fit](FORMAT.md#the-calibration-fit).
 _Avoid_: px/mm, resolution
 
 **Residual**:
-How far the reference points disagree with the fitted scale, in image pixels.
+How far the reference points disagree with the fitted scale, in image pixels. See [FORMAT § Residual](FORMAT.md#residual).
 
 ### Labels
 
+**Car**:
+One piece of rolling stock, labeled by its span. See [FORMAT § Car label](FORMAT.md#car-label).
+_Avoid_: vehicle, object, stock (for the thing itself)
+
 **Span**:
-The two end points of a car label.
+The two end points of a car label. See [FORMAT § Car label](FORMAT.md#car-label).
+
+**Train**:
+Cars whose ends coincide. Derived from the labels, never stored. See [FORMAT § Car label](FORMAT.md#car-label).
+_Avoid_: consist
+
+**Coupling**:
+The end point two cars in a train share. Derived, never labeled. See [FORMAT § Car label](FORMAT.md#car-label).
 
 **Class**:
-A dotted name for what a car is, such as `stock.loco.steam`.
+A dotted name for what a car is, such as `stock.loco.steam`. See [FORMAT § The vocabulary](FORMAT.md#the-vocabulary).
 
 **Stock**:
-The root class. Every new car is `stock`, and every class sits under it.
+The root class, under which every class sits. See [FORMAT § The vocabulary](FORMAT.md#the-vocabulary).
 
 **Vocabulary**:
-The tree of classes an author may assign.
+The tree of classes an author may assign. See [FORMAT § The vocabulary](FORMAT.md#the-vocabulary).
 _Avoid_: taxonomy, label set
 
 **Provenance**:
-How a car label came to exist: `human`, `proposed` (a model's, accepted as is) or `corrected` (a model's, then edited).
+How a car label came to exist: `human`, `proposed` (a model's, accepted as is) or `corrected` (a model's, then edited). See [FORMAT § Car label](FORMAT.md#car-label).
 
 **Labeled complete**:
-A person's assertion that no car in an image is unlabeled. Only a person can make it.
+A person's assertion that no car in an image is unlabeled. See [FORMAT § Image](FORMAT.md#image).
