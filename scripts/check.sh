@@ -1,28 +1,23 @@
 #!/usr/bin/env bash
-# The gate: CONTRIBUTING.md's capture table and every archive under archives/,
-# checked by r49-validate from rails49/occupancy. Locally it uses the sibling
-# checkout (override with OCCUPANCY=<path>); in CI it clones one.
+# The gate: the Python package and the corpus validator pass their tests and
+# the conformance cases, CONTRIBUTING.md's capture table matches data/r49.json,
+# and every archive under fixtures/ and archives/ passes r49-validate. Nothing
+# here checks out rails49/occupancy. Needs uv; the workspace is locked in uv.lock.
 set -euo pipefail
+cd "$(dirname "$0")/.."
 
-if [ "${CI:-}" = true ]; then
-  occupancy=$(mktemp -d)
-  git clone -q --depth 1 https://github.com/rails49/occupancy "$occupancy"
-  (cd "$occupancy" && COREPACK_ENABLE_DOWNLOAD_PROMPT=0 corepack pnpm install \
-    --frozen-lockfile --filter "@occupancy/r49-validate...")
-else
-  # beside the main checkout, so a linked worktree finds it too
-  main=$(dirname "$(git rev-parse --path-format=absolute --git-common-dir)")
-  occupancy=${OCCUPANCY:-$main/../occupancy}
-fi
+command -v uv >/dev/null || { echo "check.sh needs uv: https://docs.astral.sh/uv/" >&2; exit 2; }
+run=(uv run --locked --quiet)
 
-v=$(cd "$occupancy/tools/r49-validate" && pwd)
-validate=(node --import "$v/node_modules/tsx/dist/loader.mjs" "$v/src/cli.ts")
+"${run[@]}" --package rails49-r49 pytest -q python
+"${run[@]}" --package r49-validate pytest -q tools/r49-validate
 
+validate=("${run[@]}" --package r49-validate r49-validate)
 "${validate[@]}" guidance --check CONTRIBUTING.md
 
 archives=()
 while IFS= read -r -d '' path; do archives+=("$path"); done \
-  < <(find archives -name '*.r49' -print0 2>/dev/null)
+  < <(find fixtures archives -name '*.r49' -print0 2>/dev/null | sort -z)
 if [ ${#archives[@]} -gt 0 ]; then
   "${validate[@]}" -- "${archives[@]}" >/dev/null
 fi

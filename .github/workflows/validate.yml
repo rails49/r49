@@ -1,5 +1,5 @@
-# The submission gate. Issue rails49/occupancy#57 decides what it asserts, #62 what
-# it looks like; `tools/r49-validate` in rails49/occupancy does the deciding, and
+# The submission gate. Issue rails49/occupancy#57 decided what it asserts, #62 what
+# it looks like; `tools/r49-validate` in this repository does the deciding, and
 # everything here is rendering.
 #
 # Two jobs, because they answer to different things:
@@ -7,16 +7,14 @@
 # * `archives` judges what this pull request submitted. Pull requests only —
 #   there is no base to diff against otherwise.
 # * `guidance` judges whether CONTRIBUTING.md's generated capture table still
-#   matches the arithmetic it came from. That table is derived from
-#   `layout.min_dpt` over in rails49, so it goes stale from *outside* this
-#   repository, on a pull request that touched nothing near it. It therefore
-#   runs on every pull request, not only ones carrying a `.r49`.
+#   matches the arithmetic it came from: `recommended_dpt` and the scale table
+#   in data/r49.json. It runs on every pull request, not only ones carrying a
+#   `.r49`.
 #
-# There is no vendored copy of the validator and no published package: this
-# checks out rails49 at `main` and runs it from there (rails49#55). The cost is
-# exactly the coupling above — a change to `min_dpt` in rails49 reddens the next
-# pull request here. That is intended, and the failure message says so at
-# length, because otherwise it reads as the contributor's fault.
+# Nothing here checks out rails49/occupancy any more (occupancy ADR 0018). The
+# validator, the package it reads archives with and the recommended DPT all
+# live in this repository, so no change elsewhere can redden a pull request
+# here.
 name: validate
 
 on:
@@ -49,31 +47,12 @@ jobs:
         with:
           fetch-depth: 0
 
-      - uses: actions/checkout@v7
-        with:
-          repository: rails49/occupancy
-          ref: main
-          path: rails49
+      - uses: astral-sh/setup-uv@v5
 
-      # The toolchain is read out of the rails49 checkout, never restated here —
-      # `packageManager` and `.nvmrc` are the declaration rails49#55 made the
-      # corpus depend on, and rails49's own CI consumes the same two files.
-      - uses: pnpm/action-setup@v6
-        with:
-          package_json_file: rails49/package.json
-
-      - uses: actions/setup-node@v7
-        with:
-          node-version-file: rails49/.nvmrc
-          cache: pnpm
-          cache-dependency-path: rails49/pnpm-lock.yaml
-
-      # Only the validator's own subtree. A bare install would pull `ui`'s
-      # onnxruntime-web and `dataset`'s sharp — native builds this job never
-      # loads. Validating a zip costs jszip, zod and tsx.
+      # The validator and the r49 package it is built on, at the versions
+      # uv.lock pins. Pure Python: no native builds.
       - name: Install the validator
-        working-directory: rails49
-        run: pnpm install --frozen-lockfile --filter "@occupancy/r49-validate..."
+        run: uv sync --locked --package r49-validate
 
       # NUL-delimited, and never split on whitespace. A filename with a space in
       # it is precisely what the slug rule exists to reject — so it has to reach
@@ -119,8 +98,8 @@ jobs:
           printf 'validating %s\n' "${paths[@]}"
 
           set +e
-          rails49/tools/r49-validate/node_modules/.bin/tsx \
-            rails49/tools/r49-validate/src/cli.ts --author "$AUTHOR" -- "${paths[@]}" \
+          uv run --locked --quiet --package r49-validate \
+            r49-validate --author "$AUTHOR" -- "${paths[@]}" \
             > "$RUNNER_TEMP/report.json" 2> "$RUNNER_TEMP/report.txt"
           status=$?
           set -e
@@ -214,35 +193,20 @@ jobs:
     steps:
       - uses: actions/checkout@v7
 
-      - uses: actions/checkout@v7
-        with:
-          repository: rails49/occupancy
-          ref: main
-          path: rails49
-
-      - uses: pnpm/action-setup@v6
-        with:
-          package_json_file: rails49/package.json
-
-      - uses: actions/setup-node@v7
-        with:
-          node-version-file: rails49/.nvmrc
-          cache: pnpm
-          cache-dependency-path: rails49/pnpm-lock.yaml
+      - uses: astral-sh/setup-uv@v5
 
       - name: Install the validator
-        working-directory: rails49
-        run: pnpm install --frozen-lockfile --filter "@occupancy/r49-validate..."
+        run: uv sync --locked --package r49-validate
 
-      # The comparison and its wording live in the validator, where `pnpm test`
-      # covers them — not in this file, which nothing covers. The wording is the
-      # deliverable: the usual cause of a failure here is a change in rails49,
-      # a repository the contributor reading the message has never touched.
+      # The comparison and its wording live in the validator, where its tests
+      # cover them — not in this file, which nothing covers. The wording is the
+      # deliverable: the usual cause of a failure is a change to data/r49.json,
+      # not anything the contributor reading the message submitted.
       - name: Check CONTRIBUTING.md against the arithmetic it came from
         run: |
           set +e
-          rails49/tools/r49-validate/node_modules/.bin/tsx \
-            rails49/tools/r49-validate/src/cli.ts guidance --check CONTRIBUTING.md \
+          uv run --locked --quiet --package r49-validate \
+            r49-validate guidance --check CONTRIBUTING.md \
             2> "$RUNNER_TEMP/guidance.txt"
           status=$?
           set -e
