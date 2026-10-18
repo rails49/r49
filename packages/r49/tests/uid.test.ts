@@ -1,4 +1,5 @@
-import { describe, it, expect } from 'vitest';
+import { describe, it } from 'node:test';
+import { expect } from '../../../scripts/test/expect.ts';
 import { make_id, toBase62 } from '../src/uid.ts';
 
 describe('uid', () => {

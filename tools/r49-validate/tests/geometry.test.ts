@@ -1,4 +1,5 @@
-import { describe, it, expect } from 'vitest';
+import { describe, it } from 'node:test';
+import { expect } from '../../../scripts/test/expect.ts';
 import { obliquityOf, pointsOffReferencePlane } from '../src/geometry.ts';
 import type { ManifestData } from '@rails49/r49';
 

@@ -1,4 +1,5 @@
-import { describe, it, expect } from 'vitest';
+import { describe, it } from 'node:test';
+import { expect } from '../../../scripts/test/expect.ts';
 import { readFile } from 'node:fs/promises';
 import { fileURLToPath } from 'node:url';
 import { R49Archive } from '../src/index.ts';
