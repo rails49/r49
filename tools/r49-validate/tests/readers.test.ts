@@ -13,6 +13,7 @@ const accept = (over: Partial<ReaderOutcome> = {}): ReaderOutcome => ({
   rule: null,
   dpt: 18,
   residual: 0.5,
+  imageMismatches: [],
   ...over,
 });
 
@@ -37,7 +38,19 @@ describe('what the TypeScript package makes of an archive', () => {
       rule: 'manifest/not-json',
       dpt: null,
       residual: null,
+      imageMismatches: [],
     });
+  });
+
+  it('accepts an archive with a stray image and reports it', async () => {
+    const zip = await JSZip.loadAsync(fixtureBytes());
+    zip.file('stray.jpg', new Uint8Array([0xff, 0xd8, 0xff, 0xd9]));
+    const outcome = await readOutcome({
+      path: FIXTURE,
+      bytes: await zip.generateAsync({ type: 'uint8array' }),
+    });
+    expect(outcome.result).toBe('accept');
+    expect(outcome.imageMismatches).toEqual([{ rule: 'images/orphan', filename: 'stray.jpg' }]);
   });
 });
 
@@ -67,6 +80,17 @@ describe('comparing the two readers', () => {
     ]);
     expect(readerDisagreements([accept()], [accept({ residual: null })])).toEqual([
       `${FIXTURE}: residual is 0.5 in TypeScript, null in Python`,
+    ]);
+  });
+
+  it('names image mismatches that differ, in any order', () => {
+    const missing = { rule: 'images/missing', filename: 'a.jpg' } as const;
+    const orphan = { rule: 'images/orphan', filename: 'b.jpg' } as const;
+    expect(
+      readerDisagreements([accept({ imageMismatches: [missing, orphan] })], [accept({ imageMismatches: [orphan, missing] })])
+    ).toEqual([]);
+    expect(readerDisagreements([accept({ imageMismatches: [orphan] })], [accept()])).toEqual([
+      `${FIXTURE}: image mismatches are ["images/orphan b.jpg"] in TypeScript, [] in Python`,
     ]);
   });
 
