@@ -23,7 +23,7 @@ import { R49Archive, getDPT, getDPTResidual } from '../src/index.ts';
  * See `tests/fixtures/README.md`.
  */
 
-const FIXTURE = fileURLToPath(new URL('./fixtures/format-v4.r49', import.meta.url));
+const FIXTURE = fileURLToPath(new URL('../../../conformance/cases/format-v4/archive.r49', import.meta.url));
 
 async function loadFixture(): Promise<R49Archive> {
   return await R49Archive.load(await readFile(FIXTURE));
