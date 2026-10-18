@@ -19,7 +19,7 @@ schema version 4: the layout's scale, a calibration that ties image pixels to
 real millimetres, sensor points, and — per image — the cars, each a two-point
 span along its centerline carrying a record of who authored it.
 
-You make one with the [editor](https://rails49.org/ui). It runs entirely in the
+You make one with the [editor](https://occupancy.rails49.org). It runs entirely in the
 browser; there is no account and nothing is uploaded anywhere. Open a layout,
 calibrate it, label the cars, save the file.
 
