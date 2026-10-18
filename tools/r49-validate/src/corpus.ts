@@ -29,6 +29,16 @@ function segments(path: string): string[] {
 }
 
 /**
+ * Whether a path is in the corpus, under `archives/` or `fixtures/`, and so
+ * something the validator checks. Anywhere else is not a submission:
+ * `conformance/` holds archives that break format rules on purpose.
+ */
+export function inCorpus(path: string): boolean {
+  const top = segments(path)[0];
+  return top === 'archives' || top === 'fixtures';
+}
+
+/**
  * Which bar this path is held to.
  *
  * `fixtures/` sits outside `archives/` deliberately: the six are zero-label and

@@ -1,9 +1,23 @@
 import { describe, it, expect } from 'vitest';
-import { checkPath, handleOf, scopeOf } from '../src/corpus.ts';
+import { checkPath, handleOf, inCorpus, scopeOf } from '../src/corpus.ts';
 
 const codes = (findings: readonly { code: string }[]) => findings.map(f => f.code);
 
 describe('corpus paths', () => {
+  describe('the corpus', () => {
+    it('is archives/ and fixtures/, at any depth', () => {
+      expect(inCorpus('archives/alice/west-yard.r49')).toBe(true);
+      expect(inCorpus('archives/west-yard.r49')).toBe(true);
+      expect(inCorpus('fixtures/cars-0-10.r49')).toBe(true);
+      expect(inCorpus('./fixtures/cars-0-10.r49')).toBe(true);
+    });
+
+    it('leaves out the conformance cases, which are not submissions', () => {
+      expect(inCorpus('conformance/cases/reject-zip-empty/archive.r49')).toBe(false);
+      expect(inCorpus('west-yard.r49')).toBe(false);
+    });
+  });
+
   describe('scope', () => {
     it('recognises a submission and a fixture', () => {
       expect(scopeOf('archives/alice/west-yard.r49')).toBe('archives');
