@@ -1,0 +1,5 @@
+{
+  "description": "A reference point's z of 1e999 (rails49/occupancy#190).",
+  "result": "reject",
+  "rule": "manifest/schema"
+}

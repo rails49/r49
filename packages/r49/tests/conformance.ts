@@ -1,7 +1,7 @@
 import { readdirSync, readFileSync, existsSync } from 'node:fs';
 import { join } from 'node:path';
 import JSZip from 'jszip';
-import { R49Archive, R49Error, getDPT, getDPTResidual } from '../src/index.ts';
+import { R49Archive, R49Error, getDPT, getDPTResidual, type ImageMismatch } from '../src/index.ts';
 
 /**
  * The TypeScript conformance runner: reads a case from `conformance/cases/`,
@@ -12,13 +12,19 @@ import { R49Archive, R49Error, getDPT, getDPTResidual } from '../src/index.ts';
 
 /** A case's `expected.json`. */
 export type Expected = { description?: string } & (
-  | { result: 'accept'; dpt?: number | null; residual?: number | null; tolerance?: number }
+  | {
+      result: 'accept';
+      dpt?: number | null;
+      residual?: number | null;
+      tolerance?: number;
+      image_mismatches?: ImageMismatch[];
+    }
   | { result: 'reject'; rule: string }
 );
 
 /** What this package made of a case's input. */
 export type Outcome =
-  | { result: 'accept'; dpt: number | null; residual: number | null }
+  | { result: 'accept'; dpt: number | null; residual: number | null; imageMismatches: ImageMismatch[] }
   | { result: 'reject'; rule: string };
 
 /** One case, read from its directory. */
@@ -75,7 +81,12 @@ export async function judgeArchive(bytes: Uint8Array): Promise<Outcome> {
     throw err;
   }
   const manifest = archive.getManifest();
-  return { result: 'accept', dpt: getDPT(manifest), residual: getDPTResidual(manifest) };
+  return {
+    result: 'accept',
+    dpt: getDPT(manifest),
+    residual: getDPTResidual(manifest),
+    imageMismatches: archive.imageMismatches(),
+  };
 }
 
 /**
@@ -108,7 +119,8 @@ function namedImages(bytes: Uint8Array): string[] {
 /**
  * Where `outcome` disagrees with `expected`, one line each; empty when it
  * agrees. A `dpt` or `residual` absent from `expected` is not checked; `null`
- * must be `null`; a number must be within `tolerance` of the outcome.
+ * must be `null`; a number must be within `tolerance` of the outcome. The image
+ * mismatches must be `image_mismatches`, in any order; absent, there are none.
  */
 export function disagreements(expected: Expected, outcome: Outcome): string[] {
   if (expected.result !== outcome.result) {
@@ -135,5 +147,12 @@ export function disagreements(expected: Expected, outcome: Outcome): string[] {
       found.push(`expected ${key} ${want} ± ${expected.tolerance}, got ${got}`);
     }
   }
+  const want = sortedMismatches(expected.image_mismatches ?? []);
+  const got = sortedMismatches(outcome.imageMismatches);
+  if (want !== got) found.push(`expected image mismatches ${want}, got ${got}`);
   return found;
+}
+
+function sortedMismatches(mismatches: readonly ImageMismatch[]): string {
+  return JSON.stringify(mismatches.map(m => `${m.rule} ${m.filename}`).sort());
 }

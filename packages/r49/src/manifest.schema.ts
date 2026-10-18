@@ -1,11 +1,15 @@
 import { z } from 'zod';
+import { R49Error, type FormatRule } from './rules.ts';
 import { STANDARD_GAUGE, SCALE_TO_RATIO, SCALES, type Scale } from './data.ts';
-import { R49Error, type FormatRuleId } from './errors.ts';
 
-/** Every valid scale name, in the order `data.json` defines them. */
+/**
+ * Every valid scale name, in the order `data.json` defines them.
+ *
+ * Read from the package's data file; no scale table is declared in code.
+ */
 export const VALID_SCALES: readonly Scale[] = SCALES;
 
-/** A scale name. */
+/** A scale name — a key of `data.json`'s `scale_to_ratio`. */
 export type ValidScales = Scale;
 
 /** Model-domain track gauge in mm (prototype gauge / scale ratio). Internal — the prototype domain is not part of the package's public contract. */
@@ -59,23 +63,76 @@ function getGaugeMM(scale: Scale): number {
  *          answer", not "zero".
  */
 export function getDPT(manifest: ManifestData): number | null {
+  return calibrationFit(manifest).dpt;
+}
+
+/**
+ * The calibration fit as one result: what it reports, which pairs it used, and
+ * which points it left out and why. Every calibration point is in a pair or in
+ * `leftOut`, never both.
+ */
+export interface CalibrationFit {
+  /** As {@link getDPT}: `null` when calibration does not resolve. */
+  readonly dpt: number | null;
+  /** As {@link getDPTResidual}: RMS in image pixels, `null` below two pairs. */
+  readonly residual: number | null;
+  /** The equal-height pairs the fit used. */
+  readonly pairs: readonly CalibrationPair[];
+  /** The points in no pair, each with the reason. */
+  readonly leftOut: readonly LeftOutPoint[];
+  /**
+   * Whether the camera is above every calibration point, or `null` without a
+   * camera height. The format accepts a camera below a point and the fit leaves
+   * that point out; refusing to author such a layout is a writer's decision.
+   */
+  readonly cameraHeightFits: boolean | null;
+}
+
+/** Why a calibration point is in no pair of the fit. */
+export type LeftOutReason =
+  /** No camera height, and the point is off the reference plane. */
+  | 'off-reference-plane'
+  /** The point is at or above the camera. */
+  | 'above-camera'
+  /** No other usable point shares its height. */
+  | 'no-partner';
+
+/** A calibration point the fit did not use. */
+export interface LeftOutPoint {
+  readonly point: ReferencePoint;
+  readonly reason: LeftOutReason;
+}
+
+/** Fit the manifest's calibration. See {@link getDPT} for the arithmetic. */
+export function calibrationFit(manifest: ManifestData): CalibrationFit {
   const { calibration } = manifest.layout;
   const h = calibration.camera_height_mm;
   const zRef = calibration.reference_height_mm ?? 0;
+  const pairs = calibrationPairs(calibration);
+  const leftOut = leftOutPoints(calibration);
+  const scale = fitScale(pairs);
 
-  if (h !== undefined && h <= zRef) return null;
+  let dpt: number | null = null;
+  if (scale !== null && (h === undefined || h > zRef)) {
+    // Absent `h` the fit already sits on the reference plane; with it, the fit
+    // is at layout zero and this lifts it to where the track is.
+    const atReference = h === undefined ? scale : scale * (h / (h - zRef));
+    dpt = atReference * getGaugeMM(manifest.layout.scale);
+  }
 
-  const scale = fitScale(calibrationPairs(calibration));
-  if (scale === null) return null;
-
-  // Absent `h` the fit already sits on the reference plane; with it, the fit is
-  // at layout zero and this lifts it to where the track is.
-  const atReference = h === undefined ? scale : scale * (h / (h - zRef));
-  return atReference * getGaugeMM(manifest.layout.scale);
+  return {
+    dpt,
+    residual: residualOf(pairs, scale),
+    pairs,
+    leftOut,
+    cameraHeightFits: h === undefined ? null : !leftOut.some(l => l.reason === 'above-camera'),
+  };
 }
 
-/** One equal-height pair of calibration points, as the two separations the fit sees. */
-interface CalibrationPair {
+/** One equal-height pair of calibration points, and the two separations the fit sees. */
+export interface CalibrationPair {
+  readonly a: ReferencePoint;
+  readonly b: ReferencePoint;
   /** Separation in image pixels, normalized to layout zero when the camera height is known. */
   readonly dPx: number;
   /** Separation on the layout, in mm. */
@@ -104,19 +161,45 @@ function calibrationPairs(calibration: ManifestData['layout']['calibration']): C
       const b = calibration.points[j];
       const z = a.world.z;
       if (b.world.z !== z) continue;
-      // Without a camera height, only the named plane can be spoken about.
-      if (h === undefined && z !== zRef) continue;
-      // A point at or above the camera is not a pose the pinhole model has.
-      if (h !== undefined && z >= h) continue;
+      if (unusable(z, h, zRef) !== null) continue;
 
       const dPx = Math.hypot(a.px.x - b.px.x, a.px.y - b.px.y);
       pairs.push({
+        a,
+        b,
         dPx: h === undefined ? dPx : dPx * ((h - z) / h),
         dMm: Math.hypot(a.world.x - b.world.x, a.world.y - b.world.y),
       });
     }
   }
   return pairs;
+}
+
+/**
+ * Why a point at height `z` can join no pair whatever the other points are, or
+ * `null` when it can. Shared by {@link calibrationPairs} and
+ * {@link leftOutPoints}, so a point is in a pair exactly when it is not left out.
+ */
+function unusable(z: number, h: number | undefined, zRef: number): LeftOutReason | null {
+  // Without a camera height, only the named plane can be spoken about.
+  if (h === undefined) return z === zRef ? null : 'off-reference-plane';
+  // A point at or above the camera is not a pose the pinhole model has.
+  return z >= h ? 'above-camera' : null;
+}
+
+/** Every calibration point in no pair, with the reason, in authored order. */
+function leftOutPoints(calibration: ManifestData['layout']['calibration']): LeftOutPoint[] {
+  const h = calibration.camera_height_mm;
+  const zRef = calibration.reference_height_mm ?? 0;
+  const { points } = calibration;
+
+  return points.flatMap((point, i) => {
+    const z = point.world.z;
+    const reason =
+      unusable(z, h, zRef) ??
+      (points.some((other, j) => j !== i && other.world.z === z) ? null : 'no-partner');
+    return reason === null ? [] : [{ point, reason }];
+  });
 }
 
 /**
@@ -145,7 +228,7 @@ function fitScale(pairs: readonly CalibrationPair[]): number | null {
  *
  * A mis-typed world coordinate is otherwise absorbed silently into `s`, which
  * shifts DPT and therefore every derived car width without anything looking
- * wrong. The residual is what makes it visible, so the editor shows it.
+ * wrong. The residual is what makes it visible.
  *
  * It carries a second job once a camera height is authored: a wrong `h`
  * normalizes pairs at different heights inconsistently, so the same number
@@ -166,11 +249,12 @@ function fitScale(pairs: readonly CalibrationPair[]): number | null {
  *          "more than two coplanar points", stated in terms of the fit.
  */
 export function getDPTResidual(manifest: ManifestData): number | null {
-  const pairs = calibrationPairs(manifest.layout.calibration);
-  if (pairs.length < 2) return null;
+  return calibrationFit(manifest).residual;
+}
 
-  const scale = fitScale(pairs);
-  if (scale === null) return null;
+/** The RMS of `d_px − s · d_mm` over `pairs`; see {@link getDPTResidual}. */
+function residualOf(pairs: readonly CalibrationPair[], scale: number | null): number | null {
+  if (pairs.length < 2 || scale === null) return null;
 
   let sumSq = 0;
   for (const { dPx, dMm } of pairs) {
@@ -188,11 +272,6 @@ export const MANIFEST_VERSION = 4;
 
 const ScaleSchema = z.enum(SCALES);
 
-// Every number is finite. JSON can spell `1e999`, which parses to Infinity,
-// and a caller can hand over NaN; no field of the format can hold either, and
-// JSON.stringify would write both back as `null` (rails49/occupancy#190).
-const finite = () => z.number().finite();
-
 // Every object below is `.strict()`: an unknown key is a parse error, not
 // something to strip. zod's default is to drop unrecognized keys silently,
 // which means a manifest written by a newer build round-trips through an older
@@ -201,6 +280,13 @@ const finite = () => z.number().finite();
 // downstream misses a field nobody knows was deleted. Strictness is per
 // object, so it has to be spelled on each one; a new object schema without it
 // reopens the hole quietly.
+// Every number is finite (rails49/occupancy#190). The format says a number is a finite JSON
+// number, but zod's `z.number()` accepts `Infinity`, and `JSON.parse("1e400")`
+// produces it — so a manifest would load, poison the fit with NaN, and save
+// back as `null`, which no reader accepts. Every numeric field goes through
+// this, so a new one cannot forget it.
+const finite = () => z.number().finite();
+
 const PointSchema = z
   .object({
     x: finite(),
@@ -216,7 +302,7 @@ const WorldPointSchema = z
   })
   .strict();
 
-const CalibrationPointSchema = z
+const ReferencePointSchema = z
   .object({
     /** Where the feature is in the image. */
     px: PointSchema,
@@ -226,8 +312,8 @@ const CalibrationPointSchema = z
   .strict();
 
 // Calibration is always present with `points` defaulting to []. "Uncalibrated"
-// is a real state the editor handles, and an empty list expresses it without
-// every consumer null-checking the parent.
+// is a real state, and an empty list expresses it without
+// every caller null-checking the parent.
 //
 // The two heights below are `.optional()` and deliberately **not** `.default()`
 // (rails49/occupancy#139). A default is populated by the parser, so the first save of any
@@ -238,13 +324,13 @@ const CalibrationPointSchema = z
 // refused rather than misread, which is the loud failure `.strict()` produces.
 const CalibrationSchema = z
   .object({
-    points: z.array(CalibrationPointSchema).default([]),
+    points: z.array(ReferencePointSchema).default([]),
     /**
-     * Camera height above layout zero, in mm. Optional here, required by the
-     * editor — see {@link getDPT}. `.positive()` because a camera at or below
-     * the origin is not a representable pose and every consumer divides by
-     * `h − z`; the cross-field rule that it must also clear the tallest
-     * calibration point is the editor's, not the schema's.
+     * Camera height above layout zero, in mm. Optional — see {@link getDPT}. `.positive()` because a camera at or below
+     * the origin is not a representable pose and every reader of it divides by
+     * `h − z`. Whether it also clears every calibration point is reported by
+     * {@link calibrationFit} as `cameraHeightFits`; refusing to author a layout
+     * where it does not is a writer's decision, not the schema's.
      */
     camera_height_mm: finite().positive().optional(),
     /**
@@ -275,9 +361,9 @@ const carLabelBase = {
   id: z.string().min(1),
   /**
    * A plain string here, deliberately unvalidated against the vocabulary.
-   * Conformance is a warning in the editor and a fatal error in the training
-   * exporter; a format that refused to open files because someone pruned
-   * the vocabulary would punish vocabulary edits.
+   * Being in the vocabulary is a corpus rule, not a format rule; a format that
+   * refused to open files because someone pruned the vocabulary would punish
+   * vocabulary edits.
    */
   class: z.string(),
   p0: PointSchema,
@@ -316,11 +402,9 @@ const CarLabelSchema = z.discriminatedUnion('provenance', [
 function uniqueIds<T extends { id: string }>(kind: string) {
   return {
     check: (items: readonly T[]) => new Set(items.map(i => i.id)).size === items.length,
-    // Carried on the zod issue, so the failure maps to its rule id by what it
-    // is rather than by what its message says.
-    error: {
+    options: {
       message: `duplicate ${kind} id: ids must be unique within their collection`,
-      params: { rule: 'manifest/duplicate-id' satisfies FormatRuleId },
+      params: { rule: 'manifest/duplicate-id' satisfies FormatRule },
     },
   };
 }
@@ -338,7 +422,7 @@ const ImageSchema = z
      * legitimate: it is an all-background sample.
      */
     labeled_complete: z.boolean().default(false),
-    labels: z.array(CarLabelSchema).refine(labelIds.check, labelIds.error).default([]),
+    labels: z.array(CarLabelSchema).refine(labelIds.check, labelIds.options).default([]),
   })
   .strict();
 
@@ -357,7 +441,7 @@ const LayoutSchema = z
     scale: ScaleSchema,
     calibration: CalibrationSchema,
     /** Per **layout**, not per image: placing one answers for every frame. */
-    sensors: z.array(SensorSchema).refine(sensorIds.check, sensorIds.error).default([]),
+    sensors: z.array(SensorSchema).refine(sensorIds.check, sensorIds.options).default([]),
   })
   .strict();
 
@@ -397,31 +481,6 @@ export const ManifestDataSchema = z
   .strict();
 
 /**
- * Parse `manifest.json` as the bytes a zip holds: UTF-8, then JSON, then an
- * object, then the version, then everything else — each refusal under its own
- * rule id.
- *
- * The decode is strict. A lenient one turns an invalid byte into U+FFFD inside
- * a string, and the manifest loads silently changed (rails49/occupancy#191).
- *
- * @throws {R49Error} `manifest/json`, or whatever {@link assertManifestVersion}
- *         and {@link parseManifest} throw.
- */
-export function parseManifestBytes(bytes: Uint8Array): ManifestData {
-  let json: unknown;
-  try {
-    json = JSON.parse(new TextDecoder('utf-8', { fatal: true }).decode(bytes));
-  } catch (err) {
-    throw new R49Error('manifest/json', `manifest.json is not UTF-8 JSON: ${err}`);
-  }
-  if (typeof json !== 'object' || json === null || Array.isArray(json)) {
-    throw new R49Error('manifest/json', 'manifest.json does not hold a JSON object');
-  }
-  assertManifestVersion(json);
-  return parseManifest(json);
-}
-
-/**
  * Validate a manifest, rewording the one parse failure a user can act on.
  *
  * `.strict()` refuses an unknown key rather than stripping it, which is what
@@ -438,37 +497,35 @@ export function parseManifestBytes(bytes: Uint8Array): ManifestData {
  * future additive field inherits the wording.
  *
  * It names no program, because this package does not know who called it. A
- * caller with something more specific to say — the editor's "reload the app" —
- * words its own message from the rule id (rails49/r49#17).
+ * caller with something more specific to say words its own message from the
+ * rule id (rails49/r49#17).
  *
  * The hedge is not padding: an unknown key is equally a typo in a hand-built
  * manifest, and nothing can tell the two apart.
  *
- * When several rules are broken at once, an unknown key is reported first: it
- * is the one most likely to explain the others.
- *
- * @throws {R49Error} `manifest/unknown-key`, `manifest/provenance`,
- *         `manifest/duplicate-id` or `manifest/field`.
+ * @throws An {@link R49Error} naming `manifest/unknown-key`, with the reworded
+ *         message, for an unknown key; otherwise one naming the rule the first
+ *         issue broke, with zod's message.
  */
 export function parseManifest(data: unknown): ManifestData {
   const result = ManifestDataSchema.safeParse(data);
   if (result.success) return result.data;
 
   const unknown = unknownKeyPaths(result.error);
-  if (unknown.length > 0) {
-    const names = unknown.map(k => `\`${k}\``).join(', ');
-    throw new R49Error(
-      'manifest/unknown-key',
-      `This archive uses ${unknown.length === 1 ? 'a field' : 'fields'} this version of ` +
-        `@rails49/r49 does not know (${names}). It may have been written for a newer version ` +
-        `of the .r49 format, which a newer version of @rails49/r49 can read. If manifest.json ` +
-        `was edited by hand, check the key ${unknown.length === 1 ? 'name' : 'names'}.`,
-    );
+  if (unknown.length === 0) {
+    throw new R49Error(ruleOf(result.error), result.error.message, { cause: result.error });
   }
-  throw new R49Error(issueRule(result.error.issues), result.error.message);
+  const names = unknown.map(k => `\`${k}\``).join(', ');
+  throw new R49Error(
+    'manifest/unknown-key',
+    `This archive uses ${unknown.length === 1 ? 'a field' : 'fields'} this version of ` +
+      `@rails49/r49 does not know (${names}). It may have been written for a newer version ` +
+      `of the .r49 format, which a newer version of @rails49/r49 can read. If manifest.json ` +
+      `was edited by hand, check the key ${unknown.length === 1 ? 'name' : 'names'}.`,
+  );
 }
 
-/** Dotted paths of every key `.strict()` rejected. */
+/** Dotted paths of every key `.strict()` rejected, or `[]` for any other failure. */
 function unknownKeyPaths(err: z.ZodError): string[] {
   return err.issues.flatMap(issue =>
     issue.code === 'unrecognized_keys'
@@ -478,27 +535,32 @@ function unknownKeyPaths(err: z.ZodError): string[] {
 }
 
 /**
- * The rule id for a failed parse with no unknown key. A provenance failure is
- * recognised by where it is — `provenance` or `proposed_by` — since the union
- * reports it as an ordinary type or discriminator issue there.
+ * The rule a schema failure broke, read off its first issue.
+ *
+ * Provenance is recognised by path rather than by issue code: zod reports a
+ * missing or unknown discriminator, a forbidden `proposed_by` and a missing one
+ * as three different codes, and all three are the one rule. The duplicate-id
+ * refinement names its rule in its params, since a custom issue carries nothing
+ * else to tell it from any future refinement.
  */
-function issueRule(issues: readonly z.ZodIssue[]): FormatRuleId {
-  const at = (issue: z.ZodIssue) => issue.path[issue.path.length - 1];
-  if (issues.some(i => at(i) === 'provenance' || at(i) === 'proposed_by')) {
-    return 'manifest/provenance';
-  }
-  if (issues.some(i => i.code === 'custom' && i.params?.rule === 'manifest/duplicate-id')) {
+function ruleOf(err: z.ZodError): FormatRule {
+  const issue = err.issues[0];
+  if (issue.code === 'custom' && issue.params?.rule === 'manifest/duplicate-id') {
     return 'manifest/duplicate-id';
   }
-  return 'manifest/field';
+  const field = issue.path[issue.path.length - 1];
+  if (issue.path.includes('labels') && (field === 'provenance' || field === 'proposed_by')) {
+    return 'manifest/provenance';
+  }
+  return 'manifest/schema';
 }
 
 /**
  * Rejects a non-v4 manifest with a message that names the version, before the
  * schema gets a chance to report it as one issue among many.
  *
- * @throws {R49Error} `manifest/version`, if `data` is not an object or its
- *         `version` is not 4.
+ * @throws An {@link R49Error} naming `manifest/version` if `data` is not an
+ *         object, or its `version` is not 4.
  */
 export function assertManifestVersion(data: unknown): void {
   const version = (data as { version?: unknown } | null)?.version;
@@ -515,7 +577,7 @@ export function assertManifestVersion(data: unknown): void {
 
 export type Point = z.infer<typeof PointSchema>;
 export type WorldPoint = z.infer<typeof WorldPointSchema>;
-export type CalibrationPoint = z.infer<typeof CalibrationPointSchema>;
+export type ReferencePoint = z.infer<typeof ReferencePointSchema>;
 export type Calibration = z.infer<typeof CalibrationSchema>;
 export type Sensor = z.infer<typeof SensorSchema>;
 export type CarLabel = z.infer<typeof CarLabelSchema>;

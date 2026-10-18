@@ -1,0 +1,32 @@
+{
+  "version": 4,
+  "layout": {
+    "scale": "HO"
+  },
+  "camera": {
+    "resolution": {
+      "width": 1920,
+      "height": 1080
+    }
+  },
+  "images": [
+    {
+      "filename": "a.jpg",
+      "labels": [
+        {
+          "id": "car-1",
+          "class": "stock",
+          "p0": {
+            "x": 10,
+            "y": 20
+          },
+          "p1": {
+            "x": 1e999,
+            "y": 25
+          },
+          "provenance": "human"
+        }
+      ]
+    }
+  ]
+}

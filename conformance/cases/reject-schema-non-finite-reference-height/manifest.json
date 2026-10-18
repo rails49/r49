@@ -1,0 +1,16 @@
+{
+  "version": 4,
+  "layout": {
+    "scale": "HO",
+    "calibration": {
+      "points": [],
+      "reference_height_mm": 1e999
+    }
+  },
+  "camera": {
+    "resolution": {
+      "width": 1920,
+      "height": 1080
+    }
+  }
+}

@@ -1,0 +1,5 @@
+{
+  "description": "No camera.",
+  "result": "reject",
+  "rule": "manifest/schema"
+}

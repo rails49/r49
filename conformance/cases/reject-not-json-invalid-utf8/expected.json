@@ -1,0 +1,5 @@
+{
+  "description": "A byte that is never UTF-8 (0xFF) inside a string (rails49/occupancy#191). A lenient decoder would load it as U+FFFD.",
+  "result": "reject",
+  "rule": "manifest/not-json"
+}

@@ -1,0 +1,5 @@
+{
+  "description": "manifest.json holds an array, which has no version 4.",
+  "result": "reject",
+  "rule": "manifest/version"
+}

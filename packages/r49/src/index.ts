@@ -1,6 +1,6 @@
 // Public interface of @rails49/r49.
 //
-// This file is the package's interface — the only surface consumers may rely
+// This file is the package's interface — the only surface callers may rely
 // on. Anything not exported here is internal and may change without notice.
 // Per-symbol documentation lives on the declarations in ./archive.ts and
 // ./manifest.schema.ts, because TypeScript discards doc comments written on
@@ -8,14 +8,28 @@
 
 //── Archive I/O ──────────────────────────────────────────────────────────────
 // Read and write .r49 layout archives (a zip of manifest.json + images).
-// Manifests are validated against the v4 schema on load; invalid input throws.
+// Manifests are validated against the v4 schema on load; invalid input throws
+// an R49Error naming the rule it broke.
 // There is no v3 path: loading anything else fails on the version number.
 export { R49Archive } from './archive.ts';
 
-//── Format rules ─────────────────────────────────────────────────────────────
-// Every refusal is an R49Error naming the format rule broken, by the id
-// FORMAT.md § Format rules gives it. The id is the contract; the message is not.
-export { R49Error, FORMAT_RULE_IDS, type FormatRuleId } from './errors.ts';
+//── Rules ────────────────────────────────────────────────────────────────────
+// Every refusal names the rule it broke, by a stable id from one closed set, so
+// two implementations and the conformance cases agree on *why* an archive was
+// refused without agreeing on wording. Format rules are what load() and
+// setManifest() throw an R49Error for (and what imageMismatches() reports);
+// corpus rules are the corpus validator's, named here so the set is defined
+// once. Match on `rule`, never on `message`.
+export {
+  R49Error,
+  RULES,
+  FORMAT_RULES,
+  CORPUS_RULES,
+  type Rule,
+  type FormatRule,
+  type CorpusRule,
+  type ImageMismatch,
+} from './rules.ts';
 
 //── Manifest types (v4) ──────────────────────────────────────────────────────
 // The shape of a parsed manifest, as returned by R49Archive.getManifest().
@@ -33,7 +47,7 @@ export type {
   Provenance,
   Sensor,
   Calibration,
-  CalibrationPoint,
+  ReferencePoint,
   Point,
   WorldPoint,
 } from './manifest.schema.ts';
@@ -41,31 +55,42 @@ export type {
 export { MANIFEST_VERSION } from './manifest.schema.ts';
 
 //── Scale geometry ───────────────────────────────────────────────────────────
-// Consumers work with scale names and pixel-domain measurements only — the
-// prototype domain (real-world 1435mm gauge) and the model domain (physical
-// gauge in mm) are internal implementation details of how getDPT() is
-// computed.
-// getDPTResidual is the same fit's diagnostic and lives beside it deliberately:
-// both must select the same equal-z pairs, and two implementations of that rule
-// would drift.
+// Callers work with scale names, pixel-domain measurements and the authored
+// calibration points — the prototype domain (real-world 1435mm gauge) and the
+// model domain (physical gauge in mm) are internal implementation details of
+// how getDPT() is computed.
+// calibrationFit is the whole fit as one result: DPT, residual, the pairs used
+// and the points left out with the reason. getDPT and getDPTResidual read from
+// it. Every reader that needs more than a number reads the result rather than
+// reapplying the pair rule, so the rule lives in one place.
 export {
+  calibrationFit,
   getDPT,
   getDPTResidual,
   VALID_SCALES,
+  type CalibrationFit,
+  type CalibrationPair,
+  type LeftOutPoint,
+  type LeftOutReason,
   type ValidScales,
 } from './manifest.schema.ts';
 
+//── Identity ─────────────────────────────────────────────────────────────────
+// Time-ordered, collision-resistant 11-character identifiers. Archive, label
+// and sensor ids are all minted with it, so it lives with the format whose
+// `id` fields it fills.
+export { make_id } from './uid.ts';
+
 //── Class vocabulary ─────────────────────────────────────────────────────────
-// How the authored taxonomy in `data.json` is read. Here rather than in a
-// consumer because two of them must agree: the editor warns on a
-// non-conforming class, and the corpus validator blocks on it. Not parse-time
+// How the vocabulary in `data.json` is read. Here rather than in a caller
+// because callers must agree: an editor may warn on a class outside the
+// vocabulary, and the corpus validator blocks on it. Not parse-time
 // validation — `class` stays a plain string at the format layer.
-// Two tables, read by the same segment-prefix rule: the authoring taxonomy
-// (`isKnownClass`, `vocabularySubtypes`) and the YOLO class list
-// (`detectorClassIndex`). A class can be known and still have no index.
+// `isSegmentPrefix` is the rule itself, exported so a reader mapping classes
+// onto a list of its own, such as a detector's class list, matches the same way.
 export {
-  detectorClassIndex,
   isKnownClass,
+  isSegmentPrefix,
   vocabularySubtypes,
   type VocabularyNode,
 } from './vocabulary.ts';
@@ -75,13 +100,19 @@ export {
 // could not be replaced without a breaking change. Validation is an
 // implementation detail — callers get validated data or an exception.
 //
-// Withheld: STANDARD_GAUGE, SCALE_TO_RATIO and getGaugeMM, the prototype- and
-// model-domain gauge constants. Nothing outside this package needs a physical
-// gauge in mm — only the pixel-domain getDPT() and the scale names in
-// VALID_SCALES. Exposing the prototype domain would invite gauge arithmetic to
-// be reimplemented downstream (which is exactly what lib/classifier used to
-// do). FORMAT.md § Scales and gauge states the table for anyone who genuinely
-// needs it.
+// Withheld: STANDARD_GAUGE, SCALE_TO_RATIO, VOCABULARY and getGaugeMM. They
+// are read from this package's `data.json` (./data.ts), which is their one
+// authored home. Nothing outside this package needs a physical gauge in mm —
+// only the pixel-domain getDPT() and the scale names in VALID_SCALES — and
+// exposing the prototype domain would invite gauge arithmetic to be
+// reimplemented downstream. A caller that needs the values reads the data
+// file itself, exported as `@rails49/r49/data.json`, as the corpus validator
+// does.
+//
+// Withheld: `toBase62`. It is a numeric encoding helper, not an identity
+// concept — exporting it invites callers to mint ids that bypass the
+// timestamp/node/sequence structure `make_id` guarantees. Tests import it
+// directly from './uid.ts'.
 //
 // Withheld: assertManifestVersion. It is the version guard R49Archive applies
 // before parsing, not a public predicate — callers that want to know whether

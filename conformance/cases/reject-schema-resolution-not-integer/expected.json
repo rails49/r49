@@ -1,0 +1,5 @@
+{
+  "description": "A camera resolution that is not an integer.",
+  "result": "reject",
+  "rule": "manifest/schema"
+}

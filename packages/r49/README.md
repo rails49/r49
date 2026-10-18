@@ -7,7 +7,10 @@ the [conformance cases](../../conformance/) are how it, or any other, shows it
 agrees.
 
 Manifests are validated against v4 on load, so a successfully loaded archive is
-a well-formed one. Works unchanged in Node and the browser.
+a well-formed one. A refusal is an `R49Error` whose `rule` names the format rule
+broken. An archive whose images and manifest disagree still loads;
+`imageMismatches()` reports each disagreement under `images/missing` or
+`images/orphan`. Works unchanged in Node and the browser.
 
 ## Interface
 

@@ -1,5 +1,0 @@
-{
-  "description": "A reference point's world position without z.",
-  "result": "reject",
-  "rule": "manifest/field"
-}

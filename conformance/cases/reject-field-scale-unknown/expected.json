@@ -1,5 +1,0 @@
-{
-  "description": "A scale name not in the table.",
-  "result": "reject",
-  "rule": "manifest/field"
-}

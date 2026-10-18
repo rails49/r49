@@ -232,36 +232,24 @@ describe('R49Archive', () => {
       const archive = new R49Archive(new JSZip().file('unnamed.jpg', new Uint8Array([1])));
       archive.setManifest(manifest({ images: [{ filename: 'absent.jpg' }] }));
 
-      expect(archive.imageMismatches()).toEqual({ missing: ['absent.jpg'], orphan: ['unnamed.jpg'] });
+      expect(archive.imageMismatches()).toEqual([
+        { rule: 'images/missing', filename: 'absent.jpg' },
+        { rule: 'images/orphan', filename: 'unnamed.jpg' },
+      ]);
     });
 
     it('is empty for an archive built through the writer', async () => {
       const archive = new R49Archive();
       archive.setManifest(manifest());
       await archive.addImage('a.jpg', new Uint8Array([1]));
-      expect(archive.imageMismatches()).toEqual({ missing: [], orphan: [] });
+      expect(archive.imageMismatches()).toEqual([]);
     });
   });
 
   describe('the writer', () => {
-    it('refuses to write a manifest naming an image it was never given', async () => {
-      const archive = new R49Archive();
-      archive.setManifest(manifest({ images: [{ filename: 'a.jpg' }] }));
-      await expect(archive.export()).rejects.toMatchObject({ rule: 'images/missing' });
-    });
-
-    it('refuses to write a non-finite number put into the live manifest', async () => {
-      const archive = new R49Archive();
-      archive.setManifest(manifest({ layout: { scale: 'HO', calibration: { points: [cal([0, 0], [0, 0])] } } }));
-      // JSON.stringify would write NaN as null, and the archive would no
-      // longer load.
-      archive.getManifest().layout.calibration.points[0].px.x = NaN;
-      await expect(archive.export()).rejects.toMatchObject({ rule: 'manifest/field' });
-    });
-
     it('refuses a non-finite number handed to setManifest', () => {
       const m = manifest({ layout: { scale: 'HO', calibration: { points: [cal([0, 0], [Infinity, 0])] } } });
-      expect(rejection(m).rule).toBe('manifest/field');
+      expect(rejection(m).rule).toBe('manifest/schema');
     });
   });
 

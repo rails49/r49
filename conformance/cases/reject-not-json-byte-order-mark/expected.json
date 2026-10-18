@@ -1,0 +1,5 @@
+{
+  "description": "manifest.json starts with a UTF-8 byte-order mark. It is otherwise accept-minimal.",
+  "result": "reject",
+  "rule": "manifest/not-json"
+}

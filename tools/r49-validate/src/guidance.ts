@@ -15,7 +15,7 @@ import data from '@rails49/r49/data.json' with { type: 'json' };
  *
  * ```
  * DPT          = px_per_mm × gauge_mm
- * gauge_mm     = standard_gauge_mm / scale_ratios[scale]
+ * gauge_mm     = standard_gauge / scale_to_ratio[scale]
  * max_frame_mm = width_px × gauge_mm / recommended_dpt
  * ```
  */
@@ -24,10 +24,10 @@ import data from '@rails49/r49/data.json' with { type: 'json' };
 export const RECOMMENDED_DPT: number = data.recommended_dpt;
 
 /** The prototype's standard gauge in mm. */
-const STANDARD_GAUGE: number = data.standard_gauge_mm;
+const STANDARD_GAUGE: number = data.standard_gauge;
 
 /** Scale name to reduction ratio (HO is 1:87). */
-const SCALE_TO_RATIO: Readonly<Record<ValidScales, number>> = data.scale_ratios;
+const SCALE_TO_RATIO: Readonly<Record<ValidScales, number>> = data.scale_to_ratio;
 
 /**
  * The reference frame the committed table is computed for.
