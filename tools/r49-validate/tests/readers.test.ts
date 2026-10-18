@@ -34,7 +34,7 @@ describe('what the TypeScript package makes of an archive', () => {
     expect(outcome).toEqual({
       path: 'archives/alice/bad.r49',
       result: 'reject',
-      rule: 'manifest/json',
+      rule: 'manifest/not-json',
       dpt: null,
       residual: null,
     });
@@ -47,17 +47,17 @@ describe('comparing the two readers', () => {
   });
 
   it('names an archive one accepts and the other rejects', () => {
-    const python = accept({ result: 'reject', rule: 'manifest/field', dpt: null, residual: null });
+    const python = accept({ result: 'reject', rule: 'manifest/schema', dpt: null, residual: null });
     expect(readerDisagreements([accept()], [python])).toEqual([
-      `${FIXTURE}: TypeScript accepts, Python rejects (manifest/field)`,
+      `${FIXTURE}: TypeScript accepts, Python rejects (manifest/schema)`,
     ]);
   });
 
   it('names a different rule on reject', () => {
     const reject = (rule: string) =>
       accept({ result: 'reject', rule, dpt: null, residual: null });
-    expect(readerDisagreements([reject('archive/zip')], [reject('manifest/missing')])).toEqual([
-      `${FIXTURE}: TypeScript rejects under archive/zip, Python under manifest/missing`,
+    expect(readerDisagreements([reject('archive/not-zip')], [reject('archive/no-manifest')])).toEqual([
+      `${FIXTURE}: TypeScript rejects under archive/not-zip, Python under archive/no-manifest`,
     ]);
   });
 

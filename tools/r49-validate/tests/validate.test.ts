@@ -53,16 +53,19 @@ async function build(path: string, opts: Build = {}): Promise<ArchiveInput> {
     images,
   };
   archive.setManifest(manifest as ManifestData);
-  for (let i = 0; i < count; i++) await archive.addImage(`img_${i}.jpg`, A_JPEG);
-  const bytes = await archive.export();
-  if (!opts.missingImage && !opts.extraEntry) return { path, bytes };
 
-  // export() refuses to write what load() would refuse, so the image rules are
-  // broken afterwards, in the zip it wrote.
-  const zip = await JSZip.loadAsync(bytes);
-  if (opts.missingImage) zip.remove('img_0.jpg');
-  if (opts.extraEntry) zip.file(opts.extraEntry, A_JPEG);
-  return { path, bytes: await zip.generateAsync({ type: 'uint8array' }) };
+  if (!opts.missingImage) {
+    for (let i = 0; i < count; i++) await archive.addImage(`img_${i}.jpg`, A_JPEG);
+  }
+  if (opts.extraEntry) await archive.addImage(opts.extraEntry, A_JPEG);
+  // addImage appends a manifest entry, which is exactly what makes it *not*
+  // orphaned — remove the entry again so the zip carries a file nothing names.
+  if (opts.extraEntry) {
+    const manifest = archive.getManifest();
+    manifest.images = manifest.images.filter(img => img.filename !== opts.extraEntry);
+  }
+
+  return { path, bytes: await archive.export() };
 }
 
 /**
@@ -121,7 +124,7 @@ describe('validate', () => {
         bytes: new Uint8Array([1, 2, 3, 4]),
       });
 
-      expect(codes(result.errors)).toEqual(['archive/zip']);
+      expect(codes(result.errors)).toEqual(['archive/not-zip']);
       // The facts are unknown, not zero — a row still exists for the file.
       expect(result.images).toBeNull();
       expect(result.id).toBeNull();

@@ -60,6 +60,22 @@ function facts(archive: R49Archive): Omit<ArchiveReport, 'path' | 'scope' | 'err
   };
 }
 
+/**
+ * `images/missing` and `images/orphan` — the manifest and the zip must name the
+ * same images, both ways. Format rules, but `load()` reports them rather than
+ * refusing, so they are checked here.
+ */
+function checkImages(archive: R49Archive): Finding[] {
+  return archive.imageMismatches().map(({ rule, filename }) => ({
+    code: rule,
+    message:
+      rule === 'images/missing'
+        ? `The manifest names ${filename}, but the archive contains no such file.`
+        : `${filename} is in the archive but no manifest entry references it. ` +
+          `An unreferenced image is weight the corpus carries in git forever.`,
+  }));
+}
+
 /** `labels/provenance` and `labels/class` — what a label may claim, and what it may be called. */
 function checkLabels(archive: R49Archive): Finding[] {
   const findings: Finding[] = [];
@@ -246,9 +262,9 @@ export async function validate(
     try {
       archive = await R49Archive.load(input.bytes);
     } catch (err) {
-      // Every format rule, the image rules among them, is load()'s to refuse,
-      // and a refusal is reported under the id of the rule broken. Anything
-      // else thrown is a bug, not a verdict on the archive, and fails the tool.
+      // Every format rule but the two image rules is load()'s to refuse, and a
+      // refusal is reported under the id of the rule broken. Anything else
+      // thrown is a bug, not a verdict on the archive, and fails the tool.
       if (!(err instanceof R49Error)) throw err;
       reports.set(
         input.path,
@@ -261,7 +277,7 @@ export async function validate(
     }
 
     const f = facts(archive);
-    const errors: Finding[] = [...checkPath(input.path, author)];
+    const errors: Finding[] = [...checkPath(input.path, author), ...checkImages(archive)];
     const warnings: Finding[] = [];
 
     if (scope !== 'fixtures') {

@@ -68,8 +68,9 @@ without inventing a value.
 [FORMAT.md § Corpus rules](../../FORMAT.md#corpus-rules) is the list, by rule
 id; `validate.ts` implements it and `corpus.ts` holds the path rules. An archive
 `R49Archive.load()` refuses is reported under the id of the format rule it
-breaks (`archive/zip`, `manifest/version`, `images/orphan`, ...), read off the
-`R49Error`. Under `archives/<handle>/<slug>.r49` the corpus rules then block on
+breaks (`archive/not-zip`, `manifest/version`, ...), read off the `R49Error`.
+Every archive that loads is then checked for `images/missing` and
+`images/orphan`, read off `imageMismatches()`, fixtures included. Under `archives/<handle>/<slug>.r49` the corpus rules then block on
 `archive/id`, `archive/id-collision`, `labels/provenance`, `labels/class`,
 `path/shape`, `path/slug` and `path/owner`.
 
