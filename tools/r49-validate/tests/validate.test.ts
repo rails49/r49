@@ -174,6 +174,9 @@ describe('validate', () => {
         })
       );
       expect(codes(proposed.errors)).toContain('labels/provenance');
+      const message = proposed.errors.find(f => f.code === 'labels/provenance')!.message;
+      expect(message).toContain('Review it');
+      expect(message).not.toMatch(/editor|\bapp\b/i);
 
       const corrected = await reportFor(
         await build('archives/alice/west-yard.r49', {
@@ -204,13 +207,16 @@ describe('validate', () => {
       // export() mints an id when the manifest lacks one. So this check fires
       // only for a hand-assembled archive or one written by a build predating
       // that change — which is exactly the population it is aimed at, and the
-      // reason the fix in the message is "open it and save".
+      // reason the message offers saving it again before writing an id by hand.
       const result = await reportFor({
         path: 'archives/alice/west-yard.r49',
         bytes: await idlessArchive(),
       });
 
       expect(codes(result.errors)).toEqual(['archive/id']);
+      expect(result.errors[0].message).toContain('Save it again');
+      expect(result.errors[0].message).toContain('top-level "id"');
+      expect(result.errors[0].message).not.toMatch(/editor|\bapp\b/i);
       expect(result.id).toBeNull();
       // The rest of the archive is fine, so nothing else fires.
       expect(result.warnings).toEqual([]);
@@ -273,6 +279,9 @@ describe('validate', () => {
       );
 
       expect(codes(result.warnings)).toContain('calibration/unresolved');
+      const message = result.warnings.find(f => f.code === 'calibration/unresolved')!.message;
+      expect(message).toContain('Add two reference points');
+      expect(message).not.toMatch(/editor|\bapp\b/i);
       expect(result.dpt).toBeNull();
       expect(result.errors).toEqual([]);
     });
