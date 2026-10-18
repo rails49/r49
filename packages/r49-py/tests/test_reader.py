@@ -107,8 +107,13 @@ class TestLoad:
 
 
 class TestFit:
+    def test_uses_the_typescript_packages_names(self) -> None:
+        assert {"calibration_fit", "LeftOutPoint", "CalibrationPair"} <= set(r49.__all__)
+        assert not hasattr(r49, "fit")
+        assert not hasattr(r49, "LeftOut")
+
     def test_reports_pairs_by_point_index(self) -> None:
-        result = r49.fit(
+        result = r49.calibration_fit(
             manifest(
                 {
                     "points": [point(0, 0, 0), point(0, 0, 9), point(10, 0, 0), point(0, 10, 9)],
@@ -120,41 +125,48 @@ class TestFit:
         assert result.left_out == ()
 
     def test_leaves_out_points_off_the_reference_plane_without_a_camera_height(self) -> None:
-        result = r49.fit(manifest({"points": [point(0, 0, 0), point(10, 0, 0), point(0, 10, 5)]}))
-        assert result.left_out == (r49.LeftOut(2, "off-reference-plane"),)
+        result = r49.calibration_fit(
+            manifest({"points": [point(0, 0, 0), point(10, 0, 0), point(0, 10, 5)]})
+        )
+        assert result.left_out == (r49.LeftOutPoint(2, "off-reference-plane"),)
         assert result.camera_height_fits is None
 
     def test_leaves_out_points_at_or_above_the_camera(self) -> None:
         points = [point(0, 0, 0), point(10, 0, 0), point(0, 10, 100), point(5, 5, 120)]
-        result = r49.fit(manifest({"points": points, "camera_height_mm": 100}))
+        result = r49.calibration_fit(manifest({"points": points, "camera_height_mm": 100}))
         assert result.left_out == (
-            r49.LeftOut(2, "above-camera"),
-            r49.LeftOut(3, "above-camera"),
+            r49.LeftOutPoint(2, "above-camera"),
+            r49.LeftOutPoint(3, "above-camera"),
         )
         assert result.camera_height_fits is False
 
     def test_leaves_out_a_point_with_no_partner_at_its_height(self) -> None:
         points = [point(0, 0, 0), point(10, 0, 0), point(0, 10, 7)]
-        result = r49.fit(manifest({"points": points, "camera_height_mm": 100}))
-        assert result.left_out == (r49.LeftOut(2, "no-partner"),)
+        result = r49.calibration_fit(manifest({"points": points, "camera_height_mm": 100}))
+        assert result.left_out == (r49.LeftOutPoint(2, "no-partner"),)
         assert result.pairs == ((0, 1),)
 
     def test_reports_the_first_reason_that_applies(self) -> None:
         # Alone at its height and off the reference plane: off the plane wins.
-        result = r49.fit(manifest({"points": [point(0, 0, 3)], "reference_height_mm": 0}))
-        assert result.left_out == (r49.LeftOut(0, "off-reference-plane"),)
+        result = r49.calibration_fit(
+            manifest({"points": [point(0, 0, 3)], "reference_height_mm": 0})
+        )
+        assert result.left_out == (r49.LeftOutPoint(0, "off-reference-plane"),)
 
     def test_camera_height_fits_when_above_every_point(self) -> None:
         points = [point(0, 0, 0), point(10, 0, 0)]
-        fits = r49.fit(manifest({"points": points, "camera_height_mm": 1}))
+        fits = r49.calibration_fit(manifest({"points": points, "camera_height_mm": 1}))
         assert fits.camera_height_fits is True
-        assert r49.fit(manifest({"points": [], "camera_height_mm": 5})).camera_height_fits is True
-        below = r49.fit(manifest({"points": [point(0, 0, 230)], "camera_height_mm": 115}))
+        empty = r49.calibration_fit(manifest({"points": [], "camera_height_mm": 5}))
+        assert empty.camera_height_fits is True
+        below = r49.calibration_fit(
+            manifest({"points": [point(0, 0, 230)], "camera_height_mm": 115})
+        )
         assert below.camera_height_fits is False
 
     def test_has_no_dpt_with_the_camera_at_or_below_the_reference_plane(self) -> None:
         points = [point(0, 0, 0), point(10, 0, 0)]
-        result = r49.fit(
+        result = r49.calibration_fit(
             manifest({"points": points, "camera_height_mm": 1, "reference_height_mm": 1})
         )
         assert (result.camera_height_fits, result.dpt) == (True, None)

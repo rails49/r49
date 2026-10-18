@@ -8,8 +8,14 @@ Read-only: nothing here writes an archive.
 """
 
 from .archive import R49Archive, load
+from .calibration_fit import (
+    CalibrationFit,
+    CalibrationPair,
+    LeftOutPoint,
+    LeftOutReason,
+    calibration_fit,
+)
 from .errors import FORMAT_RULES, FormatRule, ImageMismatch, R49Error
-from .fit import CalibrationFit, LeftOut, LeftOutReason, fit
 from .manifest import (
     MANIFEST_VERSION,
     VALID_SCALES,
@@ -41,13 +47,14 @@ __all__ = [
     "VALID_SCALES",
     "Calibration",
     "CalibrationFit",
+    "CalibrationPair",
     "Camera",
     "CarLabel",
     "FormatRule",
     "Image",
     "ImageMismatch",
     "Layout",
-    "LeftOut",
+    "LeftOutPoint",
     "LeftOutReason",
     "Manifest",
     "Point",
@@ -60,7 +67,7 @@ __all__ = [
     "Sensor",
     "VocabularyNode",
     "WorldPoint",
-    "fit",
+    "calibration_fit",
     "is_known_class",
     "is_segment_prefix",
     "load",
