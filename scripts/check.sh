@@ -5,7 +5,7 @@
 set -euo pipefail
 
 if [ "${CI:-}" = true ]; then
-  occupancy=$(mktemp -d)
+  occupancy=$(mktemp -d "${TMPDIR:-/tmp}/occupancy.XXXXXX")
   git clone -q --depth 1 https://github.com/rails49/occupancy "$occupancy"
   (cd "$occupancy" && COREPACK_ENABLE_DOWNLOAD_PROMPT=0 corepack pnpm install \
     --frozen-lockfile --filter "@occupancy/r49-validate...")
