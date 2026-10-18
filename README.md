@@ -5,8 +5,9 @@ the people who took them. This is the training data behind
 [rails49](https://github.com/rails49/occupancy), which detects track occupancy from
 a camera instead of from block detectors.
 
-**Everything here is [CC BY 4.0](LICENSE).** Use it, train on it, redistribute
-it — credit the photographer.
+**The archives are [CC BY 4.0](LICENSE).** Use them, train on them,
+redistribute them — credit the photographer. The code is [MIT](LICENSE-MIT);
+see [Licences](#licences) for which paths are which.
 
 > ⚠️ The classifier this data feeds does sometimes miss rolling stock and does
 > sometimes report phantom trains. Nothing built from this corpus should be
@@ -18,6 +19,12 @@ One zip holding `manifest.json` plus the JPEGs it describes. The manifest is
 schema version 4: the layout's scale, a calibration that ties image pixels to
 real millimetres, sensor points, and — per image — the cars, each a two-point
 span along its centerline carrying a record of who authored it.
+
+**[FORMAT.md](FORMAT.md) defines the format in full**: every manifest field, the
+calibration fit, the rule ids, and which rules are the format's and which are
+this corpus's. It is all you need to write your own reader. The terms it uses
+are in [CONTEXT.md](CONTEXT.md), and the decisions behind it in
+[docs/adr/](docs/adr/).
 
 You make one with the [editor](https://occupancy.rails49.org). It runs entirely in the
 browser; there is no account and nothing is uploaded anywhere. Open a layout,
@@ -67,3 +74,21 @@ Archives are stored in plain git, not LFS. They are zips, so git cannot delta
 them and every revision keeps a full copy forever. That is a deliberate trade
 against contributor friction, which is the scarcer resource while the corpus is
 small. **Revisit if this repository passes a few hundred MB.**
+
+## Licences
+
+Two licences, by path:
+
+| Path | Licence |
+| :--- | :--- |
+| `archives/`, `fixtures/` — the archives | [CC BY 4.0](LICENSE) |
+| `FORMAT.md` | [CC BY 4.0](LICENSE) |
+| `CONTEXT.md`, `README.md`, `CONTRIBUTING.md`, `docs/` — the prose around the format | [CC BY 4.0](LICENSE) |
+| `tools/`, including the corpus validator in `tools/r49-validate/` | [MIT](LICENSE-MIT) |
+| `scripts/`, `.github/` | [MIT](LICENSE-MIT) |
+
+Any code added outside these paths, such as the format's packages and their
+conformance runners, is MIT and is added to this table with it. Code that moves
+here from [rails49/occupancy](https://github.com/rails49/occupancy), which stays
+AGPL-3.0, is MIT once it is here; it has one author, so relicensing it needs no
+other consent. Using the code here brings no AGPL obligations.
