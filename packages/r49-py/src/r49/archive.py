@@ -78,7 +78,7 @@ def _read_zip(data: bytes) -> dict[str, bytes]:
     try:
         with zipfile.ZipFile(io.BytesIO(data)) as zf:
             return {info.filename: zf.read(info) for info in zf.infolist() if not info.is_dir()}
-    except (zipfile.BadZipFile, zlib.error, EOFError, NotImplementedError) as err:
+    except (zipfile.BadZipFile, zlib.error, EOFError, NotImplementedError, RuntimeError) as err:
         raise R49Error(
             "archive/not-zip", f"Failed to load .r49 archive (size: {len(data)} bytes): {err}"
         ) from None

@@ -1,0 +1,5 @@
+{
+  "description": "A zip whose one entry, manifest.json, is marked encrypted, so it cannot be read.",
+  "result": "reject",
+  "rule": "archive/not-zip"
+}
