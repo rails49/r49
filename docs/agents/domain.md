@@ -1,6 +1,6 @@
 # Domain Docs
 
-How the engineering skills should consume this repo's domain documentation when exploring the codebase. This is a single-context repo.
+How the engineering skills should consume this repo's domain documentation when exploring the codebase. This is a single-context repo. For what each kind of doc holds, see the org's [ADR-0017](https://github.com/rails49/control/tree/main/docs/adr).
 
 ## Before exploring, read these
 
