@@ -39,6 +39,14 @@ Only paths under `archives/` and `fixtures/`, the corpus, are judged. Any other
 path is skipped with a note on stderr: the cases under `conformance/` break
 format rules on purpose and are not submissions.
 
+`list` prints the corpus archives, each ending in NUL: every `.r49` under
+`archives/` and `fixtures/`, or, given paths, those of them in the corpus. The
+gate and the workflows take the corpus from it.
+
+```bash
+node tools/r49-validate/dist/cli.js list | xargs -0 node tools/r49-validate/dist/cli.js
+```
+
 `guidance --check` verifies instead of printing: it reads a document, pulls the
 block out from between its `BEGIN GENERATED` / `END GENERATED` markers, and
 compares it to what `guidance` would emit. Exit 1 on drift, 0 when it matches.

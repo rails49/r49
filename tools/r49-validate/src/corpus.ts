@@ -28,6 +28,9 @@ function segments(path: string): string[] {
   return path.replace(/\\/g, '/').split('/').filter(s => s !== '' && s !== '.');
 }
 
+/** The directories that hold the corpus. */
+export const CORPUS_DIRECTORIES = ['archives', 'fixtures'] as const;
+
 /**
  * Whether a path is in the corpus, under `archives/` or `fixtures/`, and so
  * something the validator checks. Anywhere else is not a submission:
@@ -35,7 +38,12 @@ function segments(path: string): string[] {
  */
 export function inCorpus(path: string): boolean {
   const top = segments(path)[0];
-  return top === 'archives' || top === 'fixtures';
+  return (CORPUS_DIRECTORIES as readonly string[]).includes(top);
+}
+
+/** The `.r49` files among `paths` that are in the corpus, sorted. */
+export function corpusArchives(paths: readonly string[]): string[] {
+  return paths.filter(p => inCorpus(p) && p.endsWith('.r49')).sort();
 }
 
 /**

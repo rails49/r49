@@ -66,17 +66,17 @@ jobs:
       # the validator intact in order to be rejected by name, rather than
       # arriving as two paths that do not exist.
       #
-      # Only the corpus, archives/ and fixtures/, at any depth. The cases under
+      # Only the corpus, as `r49-validate list` names it. The cases under
       # conformance/ break format rules on purpose and are not submissions.
       - name: Find the archives this pull request changes
         id: changed
         env:
           BASE: ${{ github.event.pull_request.base.sha }}
         run: |
-          corpus=('archives/*.r49' 'fixtures/*.r49')
-          git diff --diff-filter=ACMR -z --name-only "$BASE" HEAD -- "${corpus[@]}" \
+          git diff --diff-filter=ACMR -z --name-only "$BASE" HEAD \
+            | xargs -0 -r node tools/r49-validate/dist/cli.js list \
             > "$RUNNER_TEMP/changed.nul"
-          git diff --diff-filter=A -z --name-only "$BASE" HEAD -- "${corpus[@]}" \
+          git diff --diff-filter=A -z --name-only "$BASE" HEAD \
             | tr '\0' '\n' > "$RUNNER_TEMP/added.txt"
           # `tr -d ' '` because wc pads its count on some platforms, and the
           # step that reads this output compares it against the string "0".
