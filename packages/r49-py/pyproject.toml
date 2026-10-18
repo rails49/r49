@@ -17,6 +17,13 @@ build-backend = "hatchling.build"
 [tool.hatch.build.targets.wheel]
 packages = ["src/r49"]
 
+# The sdist holds a copy of ../r49/src/data.json in place of the link.
+[tool.hatch.build.targets.sdist]
+exclude = ["src/r49/data.json"]
+
+[tool.hatch.build.targets.sdist.force-include]
+"../r49/src/data.json" = "src/r49/data.json"
+
 [tool.black]
 line-length = 100
 
