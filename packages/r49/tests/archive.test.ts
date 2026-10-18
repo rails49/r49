@@ -131,7 +131,7 @@ describe('R49Archive', () => {
     });
 
     it('carries DPT and its residual across a save and reopen unchanged', async () => {
-      // What the editor writes when a user calibrates: three coplanar points,
+      // A calibration as a user would author it: three coplanar points,
       // one of them slightly off, so both derived numbers are non-trivial.
       const points = [cal([0, 0], [0, 0]), cal([100, 0], [10, 0]), cal([210, 0], [20, 0])];
       const authored = manifest({
