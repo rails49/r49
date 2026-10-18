@@ -3,7 +3,9 @@
 Inputs with the outcome [FORMAT.md](../FORMAT.md) gives them. An implementation
 of the format in any language runs every case here and agrees with each one.
 The TypeScript runner is [`packages/r49/tests/conformance.ts`](../packages/r49/tests/conformance.ts),
-run by `pnpm test`.
+run by `pnpm test`; the Python one is
+[`packages/r49-py/tests/test_conformance.py`](../packages/r49-py/tests/test_conformance.py),
+run by `uv run pytest` there.
 
 ## A case
 
@@ -48,6 +50,8 @@ reported when several are broken.
 The names say what each is about: `accept-*`; `reject-*`, named after the rule
 broken; `fit-*` for the calibration fit; and `height-*` for the fit with a
 camera height.
+`accept-written-by-typescript` is an archive `@rails49/r49`'s writer exported,
+with that package's DPT and residual.
 `format-v4` is the frozen archive rails49/occupancy wrote in August 2026; it is
 never regenerated, and its [README](cases/format-v4/README.md) says why.
 
