@@ -8,9 +8,8 @@ import { VOCABULARY } from './data.ts';
  * It lives in this package because its callers must agree: an editor, where a
  * class outside the vocabulary is a visible warning, and the corpus validator,
  * where the same mismatch blocks a submission. A rule implemented twice agrees
- * only until someone edits one copy — and the copies matter *most* where they
- * disagree, because a contributor would then be rejected for a class their
- * editor showed as fine.
+ * only until someone edits one copy, and a disagreement matters because a
+ * contributor would then be rejected for a class their editor showed as fine.
  *
  * This is not parse-time validation and must not become it: `class` is a plain
  * string at the format layer, deliberately (FORMAT.md § Car label). A format

@@ -154,6 +154,19 @@ describe('validate', () => {
       expect(codes(result.errors)).toEqual(['images/orphan']);
     });
 
+    it('still reports everything else about an archive with a stray image', async () => {
+      const result = await reportFor(
+        await build('archives/alice/west-yard.r49', {
+          labels: [car({ class: 'stockyard' })],
+          extraEntry: 'stray.jpg',
+        })
+      );
+      expect(codes(result.errors)).toEqual(['images/orphan', 'labels/class']);
+      expect(result.images).toBe(1);
+      expect(result.labels).toBe(1);
+      expect(result.dpt).not.toBeNull();
+    });
+
     it('blocks an untouched proposal, and accepts a corrected one', async () => {
       const proposed = await reportFor(
         await build('archives/alice/west-yard.r49', {
