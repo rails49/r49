@@ -188,6 +188,9 @@ describe('the unknown-key refusal is worded for the person who meets it', () => 
    * version mismatch — is how a stale reader meets a newer archive. zod's own
    * `Unrecognized key(s) in object` is legible to someone holding the schema
    * and useless to a model railroader looking at a file that will not open.
+   *
+   * The package does not know who called it, so it names no program: the
+   * editor words its own message from the rule id (rails49/r49#17).
    */
   it('names the key, the likely cause, and the fix', () => {
     const archive = new R49Archive();
@@ -198,11 +201,22 @@ describe('the unknown-key refusal is worded for the person who meets it', () => 
       message = String(err);
     }
     expect(message).toContain('invented_by_a_newer_build');
-    expect(message).toContain('newer version of rails49');
-    expect(message).toContain('reload the app');
+    expect(message).toContain('newer version of the .r49 format');
+    expect(message).toContain('newer version of @rails49/r49');
     // The hedge is not padding: an unknown key is equally a hand-edit typo,
     // and nothing can tell the two apart.
-    expect(message).toContain('hand-edited');
+    expect(message).toContain('edited by hand');
+  });
+
+  it('mentions neither the editor nor the app', () => {
+    const archive = new R49Archive();
+    let message = '';
+    try {
+      archive.setManifest(manifest({ points: [], invented_by_a_newer_build: 7 }));
+    } catch (err) {
+      message = String(err);
+    }
+    expect(message).not.toMatch(/editor|\bapp\b|reload/i);
   });
 
   it('gives the dotted path, so a nested key is findable', () => {
@@ -217,8 +231,8 @@ describe('the unknown-key refusal is worded for the person who meets it', () => 
   });
 
   it('leaves every other validation failure alone', () => {
-    // Rewording a type error as "reload the app" would send the reader to the
-    // wrong place entirely.
+    // Rewording a type error as "get a newer version" would send the reader
+    // to the wrong place entirely.
     const archive = new R49Archive();
     let message = '';
     try {
@@ -226,6 +240,6 @@ describe('the unknown-key refusal is worded for the person who meets it', () => 
     } catch (err) {
       message = String(err);
     }
-    expect(message).not.toContain('reload the app');
+    expect(message).not.toContain('newer version');
   });
 });
