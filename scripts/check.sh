@@ -2,14 +2,21 @@
 # The gate, which CI runs as it is: @rails49/r49's tests and conformance
 # runner; rails49-r49's ruff, black, pyright, tests and conformance runner;
 # the same ruff, black and pyright over the validator's read.py; r49-validate's
-# tests; the comparison of the two packages over the corpus; and r49-validate
-# itself over CONTRIBUTING.md's capture table and every corpus archive.
+# tests; the check that every Markdown link goes somewhere; the comparison of
+# the two packages over the corpus; and r49-validate itself over
+# CONTRIBUTING.md's capture table and every corpus archive.
 # `r49-validate list` names the corpus.
 set -euo pipefail
 cd "$(dirname "$0")/.."
 
 if command -v pnpm >/dev/null; then pnpm=(pnpm); else pnpm=(corepack pnpm); fi
 export COREPACK_ENABLE_DOWNLOAD_PROMPT=0
+
+# @rails49/doc-links reads rails49 links through GitHub's REST API.
+if [ -z "${GITHUB_TOKEN:-}" ]; then
+  GITHUB_TOKEN=$(gh auth token)
+  export GITHUB_TOKEN
+fi
 
 # TypeScript: build, types, and every package's tests. @rails49/r49's walk the
 # conformance cases.
