@@ -1,6 +1,7 @@
 import { describe, it, expect } from 'vitest';
-import { R49Archive, getDPT, getDPTResidual } from '../src/index.ts';
-import type { ManifestData } from '../src/index.ts';
+import JSZip from 'jszip';
+import { R49Archive, R49Error, getDPT, getDPTResidual } from '../src/index.ts';
+import type { FormatRuleId, ManifestData } from '../src/index.ts';
 
 // One seam: the archive. Every test here drives the package's public interface
 // — build or load an archive, mutate the manifest, export, reload the bytes,
@@ -21,22 +22,47 @@ function manifest(overrides: Record<string, unknown> = {}): ManifestData {
   } as ManifestData;
 }
 
-/** Round-trip through the real serializer: set, export bytes, load them back. */
+/**
+ * Round-trip through the real serializer: set, add the images the manifest
+ * names, export bytes, load them back.
+ */
 async function roundTrip(data: ManifestData): Promise<R49Archive> {
   const archive = new R49Archive();
   archive.setManifest(data);
+  for (const { filename } of archive.getManifest().images) {
+    await archive.addImage(filename, new Uint8Array([0xff, 0xd8]));
+  }
   return await R49Archive.load(await archive.export());
 }
 
-/** Assert that setting this manifest is rejected, and return the message. */
-function rejection(data: unknown): string {
+/** Assert that setting this manifest is rejected, and return the error. */
+function rejection(data: unknown): R49Error {
   const archive = new R49Archive();
   try {
     archive.setManifest(data as ManifestData);
   } catch (err) {
-    return String(err);
+    if (err instanceof R49Error) return err;
+    throw err;
   }
   throw new Error('expected the manifest to be rejected, but it was accepted');
+}
+
+/** Assert that loading these bytes is rejected, and return the rule id. */
+async function loadRule(bytes: Uint8Array): Promise<FormatRuleId> {
+  try {
+    await R49Archive.load(bytes);
+  } catch (err) {
+    if (err instanceof R49Error) return err.rule;
+    throw err;
+  }
+  throw new Error('expected the archive to be rejected, but it was accepted');
+}
+
+/** Zip these entries as they are, bypassing the writer. */
+async function zip(entries: Record<string, string | Uint8Array>): Promise<Uint8Array> {
+  const z = new JSZip();
+  for (const [name, data] of Object.entries(entries)) z.file(name, data);
+  return await z.generateAsync({ type: 'uint8array' });
 }
 
 const car = (over: Record<string, unknown> = {}) => ({
@@ -151,29 +177,29 @@ describe('R49Archive', () => {
 
   describe('version', () => {
     it('rejects a v3 manifest, naming the version', () => {
-      const message = rejection({
+      const err = rejection({
         version: 3,
         layout: { name: 'Old', scale: 'N', calibration: { p0: { x: 0, y: 0 }, p1: { x: 1, y: 1 }, size_mm: 1 } },
         camera: { resolution: { width: 640, height: 480 } },
         images: [{ filename: '1.jpg', labels: {} }],
       });
-      expect(message).toContain('version');
-      expect(message).toContain('3');
+      expect(err.rule).toBe('manifest/version');
+      expect(err.message).toContain('3');
     });
 
     it('rejects a v3 archive on load, naming the version', async () => {
       // Build v3 bytes the way v3 wrote them, bypassing the v4 validator.
-      const JSZip = (await import('jszip')).default;
-      const zip = new JSZip();
-      zip.file('manifest.json', JSON.stringify({
-        version: 3,
-        layout: { scale: 'N' },
-        camera: { resolution: { width: 640, height: 480 } },
-        images: [{ filename: '1.jpg', labels: { m1: { x: 1, y: 2, type: 'track' } } }],
-      }));
-      const bytes = await zip.generateAsync({ type: 'uint8array' });
+      const bytes = await zip({
+        'manifest.json': JSON.stringify({
+          version: 3,
+          layout: { scale: 'N' },
+          camera: { resolution: { width: 640, height: 480 } },
+          images: [{ filename: '1.jpg', labels: { m1: { x: 1, y: 2, type: 'track' } } }],
+        }),
+        '1.jpg': new Uint8Array([0xff, 0xd8]),
+      });
 
-      await expect(R49Archive.load(bytes)).rejects.toThrow(/version/i);
+      expect(await loadRule(bytes)).toBe('manifest/version');
     });
   });
 
@@ -182,7 +208,7 @@ describe('R49Archive', () => {
       const m = manifest({
         images: [{ filename: 'a.jpg', labels: [car({ provenance: 'human', proposed_by: 'v1' })] }],
       });
-      expect(rejection(m)).toBeTruthy();
+      expect(rejection(m).rule).toBe('manifest/provenance');
     });
 
     it('rejects a missing proposed_by on proposed and on corrected', () => {
@@ -190,7 +216,7 @@ describe('R49Archive', () => {
         const m = manifest({
           images: [{ filename: 'a.jpg', labels: [car({ provenance })] }],
         });
-        expect(rejection(m), `${provenance} without proposed_by`).toBeTruthy();
+        expect(rejection(m).rule, `${provenance} without proposed_by`).toBe('manifest/provenance');
       }
     });
 
@@ -199,14 +225,14 @@ describe('R49Archive', () => {
       const m = manifest({
         images: [{ filename: 'a.jpg', labels: [withoutProvenance] }],
       });
-      expect(rejection(m)).toBeTruthy();
+      expect(rejection(m).rule).toBe('manifest/provenance');
     });
 
     it('rejects duplicate ids within one collection', () => {
       const dupLabels = manifest({
         images: [{ filename: 'a.jpg', labels: [car({ id: 'x' }), car({ id: 'x' })] }],
       });
-      expect(rejection(dupLabels)).toMatch(/duplicate/i);
+      expect(rejection(dupLabels).rule).toBe('manifest/duplicate-id');
 
       const dupSensors = manifest({
         layout: {
@@ -214,7 +240,7 @@ describe('R49Archive', () => {
           sensors: [{ id: 'x', x: 1, y: 1 }, { id: 'x', x: 2, y: 2 }],
         },
       });
-      expect(rejection(dupSensors)).toMatch(/duplicate/i);
+      expect(rejection(dupSensors).rule).toBe('manifest/duplicate-id');
     });
 
     it('accepts an id shared between a sensor and a label', async () => {
@@ -242,7 +268,7 @@ describe('R49Archive', () => {
       // to 8.8x between Z and G. FORMAT.md allows only its *reads as*
       // defaults, and this is not one of them.
       const m = manifest({ layout: { calibration: { points: [] }, sensors: [] } });
-      expect(rejection(m)).toBeTruthy();
+      expect(rejection(m).rule).toBe('manifest/field');
     });
 
     it('defaults an absent calibration to empty points', async () => {
@@ -424,6 +450,94 @@ describe('R49Archive', () => {
     });
   });
 
+  describe('format rules on load', () => {
+    const valid = JSON.stringify(manifest({ images: [{ filename: 'a.jpg' }] }));
+    const jpeg = new Uint8Array([0xff, 0xd8]);
+
+    it('accepts a manifest and the images it names, nothing more', async () => {
+      await expect(R49Archive.load(await zip({ 'manifest.json': valid, 'a.jpg': jpeg }))).resolves.toBeInstanceOf(R49Archive);
+    });
+
+    it('refuses empty bytes and bytes that are not a zip', async () => {
+      expect(await loadRule(new Uint8Array())).toBe('archive/zip');
+      expect(await loadRule(new TextEncoder().encode(valid))).toBe('archive/zip');
+    });
+
+    it('refuses a zip with no manifest.json at its root', async () => {
+      expect(await loadRule(await zip({ 'a.jpg': jpeg }))).toBe('manifest/missing');
+      expect(await loadRule(await zip({ 'sub/manifest.json': valid, 'a.jpg': jpeg }))).toBe('manifest/missing');
+    });
+
+    it('refuses a manifest that is not UTF-8 JSON naming an object', async () => {
+      expect(await loadRule(await zip({ 'manifest.json': '{ "version": 4,', 'a.jpg': jpeg }))).toBe('manifest/json');
+      expect(await loadRule(await zip({ 'manifest.json': '[]', 'a.jpg': jpeg }))).toBe('manifest/json');
+      expect(await loadRule(await zip({ 'manifest.json': 'null', 'a.jpg': jpeg }))).toBe('manifest/json');
+      // A lone 0xff is never UTF-8. Decoded leniently it becomes U+FFFD inside
+      // a string and the manifest would load, silently changed.
+      const invalid = new TextEncoder().encode(valid);
+      invalid[valid.indexOf('Layout')] = 0xff;
+      expect(await loadRule(await zip({ 'manifest.json': invalid, 'a.jpg': jpeg }))).toBe('manifest/json');
+    });
+
+    it('refuses a number JSON can spell but not hold', async () => {
+      // 1e999 parses to Infinity, which no field of the format can carry.
+      const text = valid.replace('"width":1920', '"width":1e999');
+      const calibrated = JSON.stringify(manifest({
+        layout: { scale: 'HO', calibration: { points: [cal([0, 0], [0, 0])] } },
+      })).replace('"x":0', '"x":1e999');
+      expect(await loadRule(await zip({ 'manifest.json': text, 'a.jpg': jpeg }))).toBe('manifest/field');
+      expect(await loadRule(await zip({ 'manifest.json': calibrated }))).toBe('manifest/field');
+    });
+
+    it('refuses an image the manifest names and the zip lacks', async () => {
+      expect(await loadRule(await zip({ 'manifest.json': valid }))).toBe('images/missing');
+    });
+
+    it('refuses a file in the zip that no image names', async () => {
+      expect(await loadRule(await zip({ 'manifest.json': valid, 'a.jpg': jpeg, 'b.jpg': jpeg }))).toBe('images/orphan');
+    });
+  });
+
+  describe('imageMismatches', () => {
+    it('names images on both sides of the manifest–zip difference', () => {
+      // The manifest names one image the zip lacks; the zip holds one the
+      // manifest does not name.
+      const archive = new R49Archive(new JSZip().file('unnamed.jpg', new Uint8Array([1])));
+      archive.setManifest(manifest({ images: [{ filename: 'absent.jpg' }] }));
+
+      expect(archive.imageMismatches()).toEqual({ missing: ['absent.jpg'], orphan: ['unnamed.jpg'] });
+    });
+
+    it('is empty for an archive built through the writer', async () => {
+      const archive = new R49Archive();
+      archive.setManifest(manifest());
+      await archive.addImage('a.jpg', new Uint8Array([1]));
+      expect(archive.imageMismatches()).toEqual({ missing: [], orphan: [] });
+    });
+  });
+
+  describe('the writer', () => {
+    it('refuses to write a manifest naming an image it was never given', async () => {
+      const archive = new R49Archive();
+      archive.setManifest(manifest({ images: [{ filename: 'a.jpg' }] }));
+      await expect(archive.export()).rejects.toMatchObject({ rule: 'images/missing' });
+    });
+
+    it('refuses to write a non-finite number put into the live manifest', async () => {
+      const archive = new R49Archive();
+      archive.setManifest(manifest({ layout: { scale: 'HO', calibration: { points: [cal([0, 0], [0, 0])] } } }));
+      // JSON.stringify would write NaN as null, and the archive would no
+      // longer load.
+      archive.getManifest().layout.calibration.points[0].px.x = NaN;
+      await expect(archive.export()).rejects.toMatchObject({ rule: 'manifest/field' });
+    });
+
+    it('refuses a non-finite number handed to setManifest', () => {
+      const m = manifest({ layout: { scale: 'HO', calibration: { points: [cal([0, 0], [Infinity, 0])] } } });
+      expect(rejection(m).rule).toBe('manifest/field');
+    });
+  });
+
   // The archive-level id is identity: optional at the format layer, required
   // by the corpus repo, and — once minted — never changed by anything this
   // package does. The two properties below are the whole contract, and both
@@ -464,7 +578,7 @@ describe('R49Archive', () => {
     });
 
     it('rejects an empty id rather than treating it as absent', () => {
-      expect(rejection(manifest({ id: '' }))).toMatch(/id/);
+      expect(rejection(manifest({ id: '' })).rule).toBe('manifest/field');
     });
   });
 
@@ -531,7 +645,9 @@ describe('R49Archive', () => {
 
     for (const [where, data, key] of cases) {
       it(`rejects an unknown key in ${where}`, () => {
-        expect(rejection(data)).toContain(key);
+        const err = rejection(data);
+        expect(err.rule).toBe('manifest/unknown-key');
+        expect(err.message).toContain(key);
       });
     }
 

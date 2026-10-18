@@ -12,6 +12,11 @@
 // There is no v3 path: loading anything else fails on the version number.
 export { R49Archive } from './archive.ts';
 
+//── Format rules ─────────────────────────────────────────────────────────────
+// Every refusal is an R49Error naming the format rule broken, by the id
+// FORMAT.md § Format rules gives it. The id is the contract; the message is not.
+export { R49Error, FORMAT_RULE_IDS, type FormatRuleId } from './errors.ts';
+
 //── Manifest types (v4) ──────────────────────────────────────────────────────
 // The shape of a parsed manifest, as returned by R49Archive.getManifest().
 //
