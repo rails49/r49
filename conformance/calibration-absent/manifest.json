@@ -1,0 +1,13 @@
+{
+  "version": 4,
+  "layout": {
+    "scale": "N"
+  },
+  "camera": {
+    "resolution": {
+      "width": 1920,
+      "height": 1080
+    }
+  },
+  "images": []
+}

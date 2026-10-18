@@ -1,0 +1,24 @@
+{
+  "accept": true,
+  "fit": {
+    "dpt": 164.9425287356322,
+    "residual": 0.0,
+    "pairs": [
+      [
+        0,
+        1
+      ],
+      [
+        0,
+        2
+      ],
+      [
+        1,
+        2
+      ]
+    ],
+    "left_out": [],
+    "camera_height_fits": null,
+    "tolerance": 1e-09
+  }
+}

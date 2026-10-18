@@ -1,0 +1,31 @@
+{
+  "version": 4,
+  "layout": {
+    "name": "Yard",
+    "description": "west end",
+    "contact": "me@example.com",
+    "scale": "HO",
+    "calibration": {
+      "points": [],
+      "camera_height_mm": 1150,
+      "reference_height_mm": 85
+    },
+    "sensors": [
+      {
+        "id": "s1",
+        "x": 1,
+        "y": 2,
+        "name": "siding 3"
+      }
+    ]
+  },
+  "camera": {
+    "resolution": {
+      "width": 1920,
+      "height": 1080
+    },
+    "model": "Pi HQ"
+  },
+  "images": [],
+  "id": "aBcDeFgHiJk"
+}

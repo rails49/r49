@@ -1,0 +1,23 @@
+{
+  "version": 4,
+  "layout": {
+    "name": "Conformance",
+    "scale": "HO",
+    "calibration": {
+      "points": []
+    },
+    "sensors": []
+  },
+  "camera": {
+    "resolution": {
+      "width": 1920,
+      "height": 1080
+    }
+  },
+  "images": [
+    {
+      "filename": "a.jpg",
+      "captured_at": "now"
+    }
+  ]
+}

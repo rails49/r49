@@ -1,0 +1,25 @@
+{
+  "accept": true,
+  "fit": {
+    "dpt": 329.8850574712644,
+    "residual": null,
+    "pairs": [
+      [
+        2,
+        3
+      ]
+    ],
+    "left_out": [
+      {
+        "point": 0,
+        "reason": "off-reference-plane"
+      },
+      {
+        "point": 1,
+        "reason": "off-reference-plane"
+      }
+    ],
+    "camera_height_fits": null,
+    "tolerance": 1e-09
+  }
+}

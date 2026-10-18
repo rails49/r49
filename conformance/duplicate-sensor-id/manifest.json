@@ -1,0 +1,25 @@
+{
+  "version": 4,
+  "layout": {
+    "scale": "N",
+    "sensors": [
+      {
+        "id": "x",
+        "x": 1,
+        "y": 1
+      },
+      {
+        "id": "x",
+        "x": 2,
+        "y": 2
+      }
+    ]
+  },
+  "camera": {
+    "resolution": {
+      "width": 1920,
+      "height": 1080
+    }
+  },
+  "images": []
+}

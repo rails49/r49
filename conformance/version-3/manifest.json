@@ -1,0 +1,30 @@
+{
+  "version": 3,
+  "layout": {
+    "name": "Old",
+    "scale": "N",
+    "calibration": {
+      "p0": {
+        "x": 0,
+        "y": 0
+      },
+      "p1": {
+        "x": 1,
+        "y": 1
+      },
+      "size_mm": 1
+    }
+  },
+  "camera": {
+    "resolution": {
+      "width": 640,
+      "height": 480
+    }
+  },
+  "images": [
+    {
+      "filename": "1.jpg",
+      "labels": {}
+    }
+  ]
+}

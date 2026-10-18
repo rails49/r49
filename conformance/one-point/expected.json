@@ -1,0 +1,16 @@
+{
+  "accept": true,
+  "fit": {
+    "dpt": null,
+    "residual": null,
+    "pairs": [],
+    "left_out": [
+      {
+        "point": 0,
+        "reason": "no-partner"
+      }
+    ],
+    "camera_height_fits": null,
+    "tolerance": 1e-09
+  }
+}
