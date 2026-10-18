@@ -75,7 +75,7 @@ def disagreements(expected: dict[str, Any], outcome: Outcome) -> list[str]:
         elif not math.fabs(got - want) <= expected["tolerance"]:
             found.append(f"expected {key} {want} ± {expected['tolerance']}, got {got}")
 
-    # In any order; absent, there are none.
+    # Order does not matter. A missing key means no mismatches.
     want = sorted((m["rule"], m["filename"]) for m in expected.get("image_mismatches", []))
     got = sorted((m.rule, m.filename) for m in outcome.image_mismatches)
     if want != got:

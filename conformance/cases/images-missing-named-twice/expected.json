@@ -1,0 +1,14 @@
+{
+  "description": "Two images name the same file, which the zip does not hold. Each is reported.",
+  "result": "accept",
+  "image_mismatches": [
+    {
+      "rule": "images/missing",
+      "filename": "b.jpg"
+    },
+    {
+      "rule": "images/missing",
+      "filename": "b.jpg"
+    }
+  ]
+}

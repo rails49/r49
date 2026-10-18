@@ -79,7 +79,7 @@ def fit(manifest: Manifest) -> CalibrationFit:
 
     fits: bool | None = None
     if h is not None:
-        fits = all(point.reason != "above-camera" for point in left_out)
+        fits = all(left.reason != "above-camera" for left in left_out)
 
     return CalibrationFit(
         dpt=dpt,

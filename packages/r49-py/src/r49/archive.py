@@ -37,13 +37,13 @@ class R49Archive:
 
     def image_mismatches(self) -> list[ImageMismatch]:
         """Every way the manifest and the zip disagree about which images this
-        archive holds: ``images/missing`` for each image the manifest names and
-        the zip lacks, then ``images/orphan`` for each file other than
-        ``manifest.json`` that no image names, in zip order. Empty for an
-        archive that follows both rules.
+        archive holds: ``images/missing`` for each image entry whose file the
+        zip lacks, in manifest order, then ``images/orphan`` for each file
+        other than ``manifest.json`` that no image names, in zip order. Empty
+        for an archive that follows both rules.
 
         Reported, not raised: :func:`load` accepts an archive with either."""
-        named = dict.fromkeys(image.filename for image in self._manifest.images)
+        named = [image.filename for image in self._manifest.images]
         missing = [
             ImageMismatch("images/missing", name) for name in named if name not in self._files
         ]
