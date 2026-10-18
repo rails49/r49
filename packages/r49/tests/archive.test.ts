@@ -229,7 +229,7 @@ describe('R49Archive', () => {
     });
 
     it('accepts an out-of-vocabulary class string', async () => {
-      // Pruning config.yaml must not lock anyone out of their own files.
+      // Pruning the vocabulary must not lock anyone out of their own files.
       const loaded = await roundTrip(manifest({
         images: [{ filename: 'a.jpg', labels: [car({ class: 'not.in.any.vocabulary' })] }],
       }));
@@ -239,8 +239,8 @@ describe('R49Archive', () => {
     it('rejects a missing scale rather than defaulting it', () => {
       // v3 defaulted this to 'N'. DPT = s · gauge_mm(scale), so a silently
       // assumed scale reports a DPT wrong by the ratio between the two — up
-      // to 8.8x between Z and G. SPEC names only two defaults, and this is
-      // not one of them.
+      // to 8.8x between Z and G. FORMAT.md allows only its *reads as*
+      // defaults, and this is not one of them.
       const m = manifest({ layout: { calibration: { points: [] }, sensors: [] } });
       expect(rejection(m)).toBeTruthy();
     });
@@ -473,7 +473,7 @@ describe('R49Archive', () => {
   // test above while silently deleting whatever a newer build wrote into it.
   describe('unknown keys are rejected, not stripped', () => {
     // Asserted on the *offending key*, not on the wording. The message is
-    // reworded for the person who meets it (#139) and may be reworded again;
+    // reworded for the person who meets it (rails49/occupancy#139) and may be reworded again;
     // what must never change is that the refusal names what was wrong.
     const cases: Array<[string, Record<string, unknown>, string]> = [
       ['the manifest root', manifest({ vendor_extra: 1 }), 'vendor_extra'],

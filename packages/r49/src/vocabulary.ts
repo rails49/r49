@@ -1,11 +1,11 @@
-import { DETECTOR_CLASSES, DETECTOR_VOCABULARY } from '@occupancy/config';
+import { DETECTOR_CLASSES, VOCABULARY } from './data.ts';
 
 /**
- * How the authored class taxonomy is *read*. The taxonomy itself is authored in
- * `config.yaml` and reaches here through the generated `@occupancy/config`; this
- * module holds only the two rules for interpreting it.
+ * How the class taxonomy is *read*. The taxonomy itself is in `data.json` (and
+ * in prose in FORMAT.md § The vocabulary); this module holds only the two rules
+ * for interpreting it.
  *
- * It lives in this package rather than in `ui/` because it now has two
+ * It lives in this package rather than in a consumer because it has two
  * consumers that must agree: the editor, where a non-conforming class is a
  * visible warning, and the corpus validator, where the same mismatch blocks a
  * submission. A rule implemented twice agrees only until someone edits one
@@ -13,9 +13,9 @@ import { DETECTOR_CLASSES, DETECTOR_VOCABULARY } from '@occupancy/config';
  * contributor would then be rejected for a class the editor drew as fine.
  *
  * This is not parse-time validation and must not become it: `class` is a plain
- * string at the format layer, deliberately (`SPEC.md` § Format). A format that
- * refused to open files because someone pruned `config.yaml` would punish
- * config edits.
+ * string at the format layer, deliberately (FORMAT.md § Car label). A format
+ * that refused to open files because the vocabulary was pruned would punish
+ * vocabulary edits.
  */
 
 /**
@@ -28,7 +28,7 @@ import { DETECTOR_CLASSES, DETECTOR_VOCABULARY } from '@occupancy/config';
 export type VocabularyNode = { readonly [key: string]: unknown };
 
 /** The authored taxonomy. A separate name so the default is legible. */
-const AUTHORED: VocabularyNode = DETECTOR_VOCABULARY;
+const AUTHORED: VocabularyNode = VOCABULARY;
 
 /** The YOLO class list. A separate name so the default is legible. */
 const CLASSES: readonly string[] = DETECTOR_CLASSES;
@@ -51,7 +51,7 @@ function isSegmentPrefix(prefix: string, cls: string): boolean {
  * **A nested object is a subtype; anything else is a property.** `width_mm` is
  * an optional per-class width override sitting beside subtypes in the same
  * mapping, and telling the two apart *structurally* is what avoids a reserved
- * list of key names that `config.yaml` would then have to know about.
+ * list of key names that the data file would then have to know about.
  */
 export function vocabularySubtypes(
   node: VocabularyNode
