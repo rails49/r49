@@ -39,7 +39,8 @@ TypeScript reader and writer, `@rails49/r49`, which passes them, and
 [`tools/r49-validate/`](tools/r49-validate/) is the corpus validator CI runs
 on every submission, built on `@rails49/r49`. `./scripts/check.sh` runs
 everything CI does: both packages' tests and conformance runners, a check that
-the two read every archive in the corpus alike, and the validator.
+the two read every archive in the corpus alike, the validator, and a check that
+every Markdown link goes somewhere.
 
 ## The layout
 

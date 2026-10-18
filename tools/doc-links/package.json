@@ -1,0 +1,16 @@
+{
+  "name": "@rails49/doc-links",
+  "version": "0.1.0",
+  "description": "The link check: every Markdown link in the repository goes somewhere",
+  "license": "MIT",
+  "type": "module",
+  "private": true,
+  "scripts": {
+    "test": "node --import ../../scripts/test/register.mjs --test 'tests/**/*.test.ts'",
+    "typecheck": "tsc --noEmit"
+  },
+  "devDependencies": {
+    "@types/node": "^24.9.2",
+    "typescript": "^5.9.3"
+  }
+}
