@@ -101,7 +101,7 @@ Two licences, by path:
 | `packages/`, including `@rails49/r49`, `rails49-r49` and their conformance runners | [MIT](LICENSE-MIT) |
 | `scripts/`, `.github/`, and the workspace files at the root: `package.json`, `pnpm-workspace.yaml`, `pnpm-lock.yaml`, `.nvmrc` | [MIT](LICENSE-MIT) |
 
-Any code added outside these paths is MIT and is added to this table with it. Code that moves
-here from [rails49/occupancy](https://github.com/rails49/occupancy), which stays
-AGPL-3.0, is MIT once it is here; it has one author, so relicensing it needs no
-other consent. Using the code here brings no AGPL obligations.
+Any code added outside these paths is MIT and is added to this table with it.
+Code and prose moved here from [rails49/occupancy](https://github.com/rails49/occupancy)
+take the licence of their path here; see
+[ADR 0019](docs/adr/0019-what-moves-here-from-occupancy-takes-the-licence-of-its-path.md).
