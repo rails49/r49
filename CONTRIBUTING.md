@@ -11,10 +11,10 @@ located reliably, and that is a fact about your camera and your scale, not about
 your layout. The widest strip of track that may span one frame:
 
 <!-- BEGIN GENERATED — do not edit by hand.
-     Produced in the rails49 checkout by:
-       pnpm --silent --filter @occupancy/r49-validate guidance
-     CI diffs this block against that command's output, because the minimum it
-     is derived from is provisional and will move. -->
+     Produced at the root of this repository by:
+       pnpm --silent --filter @rails49/r49-validate guidance
+     CI diffs this block against that command's output, because the recommended
+     DPT it is derived from, in packages/r49/src/data.json, may move. -->
 
 Reference frame: **1920 px** wide. Minimum DPT: **20**.
 

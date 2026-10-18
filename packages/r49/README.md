@@ -17,7 +17,9 @@ symbol documentation lives on the declarations in `src/archive.ts` and
 `src/manifest.schema.ts`, where your editor will show it on hover.
 
 The scale table and the vocabulary are in [`src/data.json`](src/data.json), so
-a reader in another language can load the same numbers.
+a reader in another language can load the same numbers. It also holds the
+corpus's recommended DPT, which the validator in `tools/r49-validate/` reads.
+The file is exported as `@rails49/r49/data.json`.
 
 ## Build and test
 
