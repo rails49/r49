@@ -1,4 +1,5 @@
-import { describe, it, expect } from 'vitest';
+import { describe, it } from 'node:test';
+import { expect } from '../../../scripts/test/expect.ts';
 import JSZip from 'jszip';
 import { readFileSync } from 'node:fs';
 import { readerDisagreements, readOutcome, type ReaderOutcome } from '../src/readers.ts';

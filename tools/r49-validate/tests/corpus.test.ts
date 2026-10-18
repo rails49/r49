@@ -1,4 +1,5 @@
-import { describe, it, expect } from 'vitest';
+import { describe, it } from 'node:test';
+import { expect } from '../../../scripts/test/expect.ts';
 import { checkPath, handleOf, inCorpus, scopeOf } from '../src/corpus.ts';
 
 const codes = (findings: readonly { code: string }[]) => findings.map(f => f.code);

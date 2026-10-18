@@ -20,7 +20,9 @@ fi
 
 # TypeScript: build, types, and every package's tests. @rails49/r49's walk the
 # conformance cases.
-"${pnpm[@]}" install --frozen-lockfile
+# A modules directory made on another platform is purged and relinked
+# without asking.
+"${pnpm[@]}" install --frozen-lockfile --config.confirmModulesPurge=false
 "${pnpm[@]}" -r build
 "${pnpm[@]}" -r typecheck
 "${pnpm[@]}" -r test

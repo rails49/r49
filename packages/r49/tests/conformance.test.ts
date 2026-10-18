@@ -1,4 +1,5 @@
-import { describe, it, expect } from 'vitest';
+import { describe, it } from 'node:test';
+import { expect } from '../../../scripts/test/expect.ts';
 import { fileURLToPath } from 'node:url';
 import { FORMAT_RULE_IDS, R49Archive, getDPT, getDPTResidual } from '../src/index.ts';
 import type { ManifestData } from '../src/index.ts';

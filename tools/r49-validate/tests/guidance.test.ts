@@ -1,4 +1,5 @@
-import { describe, it, expect } from 'vitest';
+import { describe, it } from 'node:test';
+import { expect } from '../../../scripts/test/expect.ts';
 import { readFileSync } from 'node:fs';
 import { VALID_SCALES } from '@rails49/r49';
 import {

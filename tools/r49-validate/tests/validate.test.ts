@@ -1,4 +1,5 @@
-import { describe, it, expect } from 'vitest';
+import { describe, it } from 'node:test';
+import { expect } from '../../../scripts/test/expect.ts';
 import JSZip from 'jszip';
 import { R49Archive, type ManifestData } from '@rails49/r49';
 import { RECOMMENDED_DPT } from '../src/guidance.ts';

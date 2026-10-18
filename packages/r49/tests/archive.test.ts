@@ -1,4 +1,5 @@
-import { describe, it, expect } from 'vitest';
+import { describe, it } from 'node:test';
+import { expect } from '../../../scripts/test/expect.ts';
 import JSZip from 'jszip';
 import { R49Archive, R49Error, getDPT, getDPTResidual } from '../src/index.ts';
 import type { ManifestData } from '../src/index.ts';
@@ -275,7 +276,7 @@ describe('R49Archive', () => {
       expect(archive.getManifest().id).toBeUndefined();
 
       const loaded = await R49Archive.load(await archive.export());
-      expect(loaded.getManifest().id).toEqual(expect.any(String));
+      expect(typeof loaded.getManifest().id).toBe('string');
       expect(loaded.getManifest().id).not.toHaveLength(0);
     });
 
