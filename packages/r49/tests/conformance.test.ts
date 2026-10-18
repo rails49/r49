@@ -1,14 +1,14 @@
 import { describe, it } from 'node:test';
 import { expect } from '../../../scripts/test/expect.ts';
 import { fileURLToPath } from 'node:url';
-import { FORMAT_RULE_IDS, R49Archive, getDPT, getDPTResidual } from '../src/index.ts';
+import { FORMAT_RULES, R49Archive, getDPT, getDPTResidual } from '../src/index.ts';
 import type { ManifestData } from '../src/index.ts';
 import { disagreements, judge, judgeArchive, readCases } from './conformance.ts';
 
 /**
  * Every case in `conformance/cases/`, run through this package. Cases assert
- * an outcome — accept or reject, the rule id, DPT and residual — and never a
- * message: the id is the contract, the wording is not.
+ * an outcome — accept or reject, the rule id, DPT, residual and image
+ * mismatches — and never a message: the id is the contract, the wording is not.
  */
 
 const CASES = fileURLToPath(new URL('../../../conformance/cases/', import.meta.url));
@@ -21,15 +21,24 @@ describe('conformance cases', () => {
     });
   }
 
-  it('reject every format rule id at least once', () => {
-    const rejected = new Set(cases.flatMap(c => (c.expected.result === 'reject' ? [c.expected.rule] : [])));
-    expect(FORMAT_RULE_IDS.filter(rule => !rejected.has(rule))).toEqual([]);
+  const rejected = new Set(cases.flatMap(c => (c.expected.result === 'reject' ? [c.expected.rule] : [])));
+  const reported = new Set<string>(
+    cases.flatMap(c => (c.expected.result === 'accept' ? (c.expected.image_mismatches ?? []) : [])).map(m => m.rule),
+  );
+  const imageRules = ['images/missing', 'images/orphan'];
+
+  it('reject every format rule id at least once, except the two image rules', () => {
+    expect(FORMAT_RULES.filter(rule => !imageRules.includes(rule) && !rejected.has(rule))).toEqual([]);
+  });
+
+  it('report each image rule at least once, and never reject on one', () => {
+    expect(imageRules.filter(rule => !reported.has(rule))).toEqual([]);
+    expect([...rejected].filter(rule => rule.startsWith('images/'))).toEqual([]);
   });
 
   it('name only format rule ids', () => {
-    const known = new Set<string>(FORMAT_RULE_IDS);
-    const unknown = cases.filter(c => c.expected.result === 'reject' && !known.has(c.expected.rule));
-    expect(unknown.map(c => c.name)).toEqual([]);
+    const known = new Set<string>(FORMAT_RULES);
+    expect([...rejected, ...reported].filter(rule => !known.has(rule))).toEqual([]);
   });
 });
 

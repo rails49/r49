@@ -7,8 +7,9 @@ in [CONTEXT.md](CONTEXT.md).
 It holds two kinds of rule, kept apart on purpose:
 
 * **[Format rules](#format-rules)** say what an archive is. They hold for every
-  archive, inside the corpus and outside it. A file that breaks one is not an
-  archive, and a reader refuses it.
+  archive, inside the corpus and outside it. A file that breaks one is not a
+  valid archive. A reader refuses it, except under the two image rules, which a
+  reader reports.
 * **[Corpus rules](#corpus-rules)** say what this repository accepts. They sit
   here because a reader needs some of them to interpret a field (the vocabulary
   above all), but an archive that breaks one is still a valid archive.
@@ -22,7 +23,7 @@ This document is licensed [CC BY 4.0](LICENSE), like the archives it describes.
 
 An archive is a zip file. At its root it holds:
 
-* `manifest.json`: the manifest, UTF-8 JSON, described below.
+* `manifest.json`: the manifest, UTF-8 JSON with no byte-order mark, described below.
 * The images, JPEG in practice, each at the path its `images[].filename` names.
 
 Nothing else. Every image the manifest names is in the zip, and every file in
@@ -68,7 +69,7 @@ shares them.
 }
 ```
 
-A *number* is any JSON number. An *integer* is a number with no fractional part.
+A *number* is any finite JSON number. An *integer* is a number with no fractional part.
 A *string* may be empty unless the table says otherwise. Image positions are in
 pixels of the frame `camera.resolution` names, with `x` to the right and `y`
 down. Layout positions are in millimetres.
@@ -189,19 +190,28 @@ more than one rule, which one is reported is not specified.
 
 | Rule id | The archive is refused because |
 | :--- | :--- |
-| `archive/zip` | the bytes are empty or are not a readable zip. |
-| `manifest/missing` | the zip has no `manifest.json` at its root. |
-| `manifest/json` | `manifest.json` is not UTF-8 JSON, or is not a JSON object. |
-| `manifest/version` | `version` is not 4. |
+| `archive/empty` | the bytes are empty. |
+| `archive/not-zip` | the bytes are not a readable zip. |
+| `archive/no-manifest` | the zip has no `manifest.json` at its root. |
+| `manifest/not-json` | `manifest.json` is not UTF-8 JSON: it does not parse, holds a byte that is not UTF-8, or starts with a byte-order mark. |
+| `manifest/version` | `version` is not 4, including a manifest that is not a JSON object. |
 | `manifest/unknown-key` | an object holds a key this document does not define. |
 | `manifest/duplicate-id` | two sensors, or two labels in one image, share an `id`. |
 | `manifest/provenance` | a label's `provenance` is missing or not one of the three, or `proposed_by` is present on `human`, or missing or empty on `proposed` or `corrected`. |
-| `manifest/field` | any other field is missing, has the wrong type or is out of range: no `scale`, an unknown scale name, an empty `id`, a `camera_height_mm` of 0 or below, a non-integer resolution. |
+| `manifest/schema` | any other field is missing, has the wrong type or is out of range: no `scale`, an unknown scale name, an empty `id`, a `camera_height_mm` of 0 or below, a non-integer resolution, a number too large to be finite such as `1e999`. |
+
+Two rules are about the images, and a reader reports them instead of refusing
+the archive. It loads the archive and lists each disagreement, by its file name,
+under its rule id:
+
+| Rule id | Reported when |
+| :--- | :--- |
 | `images/missing` | the manifest names an image the zip does not hold. |
 | `images/orphan` | the zip holds a file other than `manifest.json` that no image names. |
 
 A reader that parses a manifest on its own, without a zip, applies every rule
-except `archive/zip`, `manifest/missing`, `images/missing` and `images/orphan`.
+except `archive/empty`, `archive/not-zip`, `archive/no-manifest`,
+`images/missing` and `images/orphan`.
 
 ## Scales and gauge
 
@@ -291,13 +301,12 @@ A fit reports, together:
 
 * **DPT**, or null.
 * **The residual**, or null.
-* **The pairs used**, by the indexes of their two points in `points`.
-* **The points left out**, each with its index and which of the three reasons
-  applied.
+* **The pairs used**, each by its two points.
+* **The points left out**, each with which of the three reasons applied.
 * **Whether the camera height fits**: null when `h` is absent; otherwise true
-  when `h` is above `z_ref` and above every reference point's `z`, false if
-  not. False is not a format error, but it means the camera height or a height
-  was mistyped, and the DPT should not be trusted.
+  when `h` is above every reference point's `z`, false if not. False is not a
+  format error, but it means the camera height or a height was mistyped, and
+  the DPT should not be trusted.
 
 ## Corpus rules
 

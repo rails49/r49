@@ -1,25 +1,39 @@
 import data from './data.json' with { type: 'json' };
+import type { VocabularyNode } from './vocabulary.ts';
 
 /**
- * The format's tables, typed. `data.json` holds them so that a reader in any
- * language can load the same numbers this package computes with; FORMAT.md
- * § Scales and gauge and § The vocabulary state them in prose.
+ * The format's constants, read from `data.json` beside this file — their one
+ * authored home. This module declares none of them; it only gives the parsed
+ * file types the rest of the package can use.
+ *
+ * A JSON file rather than TypeScript because more than this package reads it:
+ * the Python reader loads it with nothing but the standard library, and the
+ * corpus validator reads the recommended DPT from it. See ADR 0018.
  */
 
-/** A scale name. */
-export type Scale = 'G' | 'O' | 'S' | 'HO' | 'T' | 'N' | 'Z';
+/** Prototype track gauge in mm. */
+export const STANDARD_GAUGE: number = data.standard_gauge;
 
-/** The prototype's standard gauge in mm. */
-export const STANDARD_GAUGE: number = data.standard_gauge_mm;
+/**
+ * Scale name to reduction ratio (HO is 1:87). Model-domain gauge is
+ * `STANDARD_GAUGE / SCALE_TO_RATIO[scale]`.
+ */
+export const SCALE_TO_RATIO = data.scale_to_ratio;
 
-/** Scale name to reduction ratio (HO is 1:87). */
-export const SCALE_TO_RATIO: Readonly<Record<Scale, number>> = data.scale_ratios;
+/** Every scale name the data file defines a ratio for. */
+export type Scale = keyof typeof SCALE_TO_RATIO;
 
-/** Scale names as a non-empty tuple, in the data file's order — the form a schema enum needs. */
+/**
+ * Scale names as a non-empty tuple, in the data file's order — the form a
+ * schema enum needs.
+ */
 export const SCALES = Object.keys(SCALE_TO_RATIO) as [Scale, ...Scale[]];
 
-/** The authoring taxonomy — what a label's `class` should match. */
-export const VOCABULARY: { readonly [key: string]: unknown } = data.vocabulary;
-
-/** The YOLO class list, indexed by a detector's class field. */
-export const DETECTOR_CLASSES: readonly string[] = data.detector_classes;
+/**
+ * The vocabulary — what a label's `class` should match.
+ *
+ * A **nested object is a subtype**; any other value is a property of the class
+ * it sits under (`width_mm` is the one such property). The single root is
+ * required: every stored class is rooted at it.
+ */
+export const VOCABULARY: VocabularyNode = data.vocabulary;

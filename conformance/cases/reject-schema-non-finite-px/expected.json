@@ -1,0 +1,5 @@
+{
+  "description": "1e999 is JSON, but parses to Infinity, which no field can hold (rails49/occupancy#190).",
+  "result": "reject",
+  "rule": "manifest/schema"
+}

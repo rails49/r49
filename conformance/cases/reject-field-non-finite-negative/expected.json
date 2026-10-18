@@ -1,5 +1,0 @@
-{
-  "description": "-1e999 parses to -Infinity (rails49/occupancy#190).",
-  "result": "reject",
-  "rule": "manifest/field"
-}

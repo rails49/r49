@@ -1,0 +1,5 @@
+{
+  "description": "A camera height below layout zero.",
+  "result": "reject",
+  "rule": "manifest/schema"
+}

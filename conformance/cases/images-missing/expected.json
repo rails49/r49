@@ -1,0 +1,5 @@
+{
+  "description": "The manifest names an image the zip does not hold. The archive loads and reports it.",
+  "result": "accept",
+  "image_mismatches": [{ "rule": "images/missing", "filename": "b.jpg" }]
+}

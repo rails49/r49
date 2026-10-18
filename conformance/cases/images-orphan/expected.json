@@ -1,0 +1,5 @@
+{
+  "description": "The zip holds a file no image names. The archive loads and reports it.",
+  "result": "accept",
+  "image_mismatches": [{ "rule": "images/orphan", "filename": "b.jpg" }]
+}

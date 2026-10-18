@@ -1,0 +1,5 @@
+{
+  "description": "A label with an empty id.",
+  "result": "reject",
+  "rule": "manifest/schema"
+}

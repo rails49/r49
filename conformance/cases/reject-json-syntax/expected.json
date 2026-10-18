@@ -1,5 +1,0 @@
-{
-  "description": "manifest.json cut short.",
-  "result": "reject",
-  "rule": "manifest/json"
-}

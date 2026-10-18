@@ -1,0 +1,5 @@
+{
+  "description": "labeled_complete as a string.",
+  "result": "reject",
+  "rule": "manifest/schema"
+}

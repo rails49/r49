@@ -12,10 +12,10 @@ run by `uv run pytest` there.
 Each directory under `cases/` is one case. It holds exactly one input:
 
 * `archive.r49`: archive bytes, to be loaded as an archive. They are not always
-  a zip; some cases exist to be refused as `archive/zip`.
+  a zip; some cases exist to be refused as `archive/empty` or `archive/not-zip`.
 * `manifest.json`: a bare manifest, to be parsed on its own. FORMAT.md exempts
-  a bare manifest from `archive/zip`, `manifest/missing`, `images/missing` and
-  `images/orphan`. A runner whose implementation reads manifests only inside an
+  a bare manifest from `archive/empty`, `archive/not-zip`, `archive/no-manifest`,
+  `images/missing` and `images/orphan`. A runner whose implementation reads manifests only inside an
   archive may zip the bytes as `manifest.json` beside a placeholder for every
   image the manifest names, which is what the TypeScript runner does.
 
@@ -25,10 +25,13 @@ and `expected.json`:
 {
   "description": "…",            // what the case is about; not checked
   "result": "accept",            // or "reject"
-  "rule": "manifest/field",      // reject only: the format rule id
+  "rule": "manifest/schema",     // reject only: the format rule id
   "dpt": 164.9425287356322,      // accept only: DPT, or null where it does not resolve
   "residual": null,              // accept only: the residual, or null
-  "tolerance": 1e-9              // absolute; applies to dpt and residual when either is a number
+  "tolerance": 1e-9,             // absolute; applies to dpt and residual when either is a number
+  "image_mismatches": [          // accept only: what the archive reports; absent means none
+    { "rule": "images/orphan", "filename": "notes.txt" }
+  ]
 }
 ```
 
@@ -38,18 +41,22 @@ A case **agrees** when:
 * on reject, the rule id reported is `rule`;
 * on accept, each of `dpt` and `residual` that is present is `null` when the
   implementation's is null, and otherwise within `tolerance` of it. Absent
-  means not checked.
+  means not checked;
+* on accept, the image mismatches the implementation reports are
+  `image_mismatches`, in any order, or none when it is absent.
 
 Cases assert rule ids, never message text: the id is the contract, the wording
-is not. Every format rule id has at least one rejecting case, and each rejecting
-case breaks exactly one rule, since FORMAT.md does not say which rule is
-reported when several are broken.
+is not. Every format rule id has at least one case: a rejecting case, or for
+`images/missing` and `images/orphan`, which are reported and never refused, an
+accepting case that reports it. Each rejecting case breaks exactly one rule,
+since FORMAT.md does not say which rule is reported when several are broken.
 
 ## The cases
 
 The names say what each is about: `accept-*`; `reject-*`, named after the rule
-broken; `fit-*` for the calibration fit; and `height-*` for the fit with a
-camera height.
+broken; `images-*` for an archive that loads and reports an image mismatch;
+`fit-*` for the calibration fit; and `height-*` for the fit with a camera
+height.
 `accept-written-by-typescript` is an archive `@rails49/r49`'s writer exported,
 with that package's DPT and residual.
 `format-v4` is the frozen archive rails49/occupancy wrote in August 2026; it is
