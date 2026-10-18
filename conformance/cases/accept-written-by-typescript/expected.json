@@ -1,0 +1,7 @@
+{
+  "description": "An archive the TypeScript writer exported: labels, a sensor, an image in a folder, and reference points at two heights under a camera height. DPT and residual are the TypeScript package's.",
+  "result": "accept",
+  "dpt": 11.574804714564149,
+  "residual": 2.625975895440504,
+  "tolerance": 1e-9
+}
