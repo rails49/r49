@@ -2,6 +2,8 @@
 
 Status: accepted, not yet built. Replaces the decision in [#55](https://github.com/rails49/occupancy/issues/55).
 
+Copied from rails49/occupancy, where it stays as ADR 0018. Written there, so "this repository" means occupancy and the ADR numbers it cites are occupancy's, except ADR 0008, which is now [here](0008-v4-only-and-optional-fields-add-no-version.md).
+
 The corpus is CC BY 4.0 so that others can train on it. An outside reader should not have to read this repository to understand an archive. `rails49/r49` therefore owns the format: a written definition, a TypeScript implementation that reads and writes, a Python implementation that only reads, and conformance cases both must pass. The cases are archives or bare manifests with the expected result, the rule that failed, and the expected DPT within a tolerance. The scales, gauge, vocabulary and recommended DPT sit in one JSON file there that both implementations and the validator read. Code is MIT; archives and the written definition stay CC BY 4.0. Each tag publishes `@rails49/r49` to npm and `rails49-r49` to PyPI, so installing either never downloads the corpus.
 
 The corpus rules (format validity, `id`, path, no `proposed` label, every class in the vocabulary) block a submission. DPT is a reader requirement, not a corpus rule: r49 reports it, warns below its own recommended DPT, and never refuses. This repository's `min_dpt` is the detector's requirement and is set separately. The DPT fit, its residual and the camera-height correction belong to the implementations in r49, since every reader filters on the same number. Car width does not: it is this project's choice, set wide so boxes cover sensors.
@@ -10,7 +12,7 @@ This repository depends on `@rails49/r49` pinned to a version and deletes `lib/r
 
 ## Considered options
 
-- Keep the format here and have r49 run this repository's validator at `main` (#55). Outside readers would need both repositories, and the TypeScript source cannot be installed outside this workspace or used from Python.
+- Keep the format here and have r49 run this repository's validator at `main` ([#55](https://github.com/rails49/occupancy/issues/55)). Outside readers would need both repositories, and the TypeScript source cannot be installed outside this workspace or used from Python.
 - Keep the definition here and generate a checked copy into r49. The copy would be a document, not code an outside reader can run.
 - Install the packages from git. Every install would download the corpus.
 - Let read-only loading ignore unknown keys. That gives two load modes and two expected results per conformance case, to spare readers an upgrade that schema changes rarely require.
