@@ -10,7 +10,7 @@
  * `R49Archive.load` and `setManifest` throw an {@link R49Error} naming one of
  * them, except the two `images/` rules, which `R49Archive.imageMismatches`
  * reports instead of throwing: refusing to open a file because it carries a
- * stray image would lock its author out of the one tool that can fix it.
+ * stray image would lock its author out of the program that can fix it.
  *
  * Ids are append-only. Renaming one breaks every conformance case that names it.
  */
@@ -78,8 +78,7 @@ export type Rule = FormatRule | CorpusRule;
  * The error every refusal of an archive throws: an ordinary `Error` whose
  * message is for a person, plus the {@link FormatRule} it broke, for a program.
  *
- * `name` is deliberately left as `Error`, so `String(err)` reads exactly as it
- * did before rules existed.
+ * `name` is left as `Error`, so `String(err)` reads `Error: ` and the message.
  */
 export class R49Error extends Error {
   /** The rule this archive broke. Stable; safe to match on. */

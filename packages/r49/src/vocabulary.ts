@@ -38,9 +38,9 @@ const AUTHORED: VocabularyNode = VOCABULARY;
  * of `stock`, but never of `stockyard`. A plain `startsWith` would match the
  * last of those, silently mapping an unrelated class onto a trained index.
  *
- * Exported because a reader that maps classes onto a list of its own, such as
- * a detector's class list, must match by the same rule the vocabulary is read
- * with, or a class could be known here and unmapped there.
+ * Exported because a reader that maps classes onto a list of its own must
+ * match by the same rule the vocabulary is read with, or a class could be
+ * known here and unmapped there.
  */
 export function isSegmentPrefix(prefix: string, cls: string): boolean {
   return cls === prefix || cls.startsWith(`${prefix}.`);
