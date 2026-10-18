@@ -54,7 +54,7 @@ export interface ArchiveReport {
    * Camera height above layout zero in mm, or `null` when the archive does not
    * carry one — **reported, never required**. Every archive predates the field,
    * and blocking on it would reject real data with valid pixel-space labels for
-   * a defect nothing has shown costs accuracy (#136, #139). The editor is where
+   * a defect nothing has shown costs accuracy (rails49/occupancy#136, #139). The editor is where
    * it is required; here it is a fact a maintainer triaging a submission wants
    * at a glance.
    */
@@ -68,7 +68,7 @@ export interface ArchiveReport {
    *
    * The same `dptResidual` rule applies, and for the same reason: the geometry
    * is quantified but its cost to *accuracy* is unmeasured, so a threshold here
-   * would be a number nothing earned. See `SPEC.md` § Camera height.
+   * would be a number nothing earned. See rails49/occupancy's `SPEC.md` § Camera height.
    */
   readonly obliquityDeg: number | null;
   readonly widthInflation: number | null;

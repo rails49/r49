@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import JSZip from 'jszip';
-import { R49Archive, type ManifestData } from '@occupancy/r49';
-import { MIN_DPT } from '@occupancy/config';
+import { R49Archive, type ManifestData } from '@rails49/r49';
+import { RECOMMENDED_DPT } from '../src/guidance.ts';
 import { validate, type ArchiveInput } from '../src/validate.ts';
 
 // Every archive here is built by R49Archive and exported through the real
@@ -12,7 +12,7 @@ import { validate, type ArchiveInput } from '../src/validate.ts';
 
 const A_JPEG = new Uint8Array([0xff, 0xd8, 0xff, 0xd9]);
 
-/** Two calibration points far enough apart to clear MIN_DPT at HO. */
+/** Two calibration points far enough apart to reach the recommended DPT at HO. */
 const CALIBRATED = [
   { px: { x: 0, y: 0 }, world: { x: 0, y: 0, z: 0 } },
   { px: { x: 1000, y: 0 }, world: { x: 800, y: 0, z: 0 } },
@@ -52,26 +52,23 @@ async function build(path: string, opts: Build = {}): Promise<ArchiveInput> {
     images,
   };
   archive.setManifest(manifest as ManifestData);
+  for (let i = 0; i < count; i++) await archive.addImage(`img_${i}.jpg`, A_JPEG);
+  const bytes = await archive.export();
+  if (!opts.missingImage && !opts.extraEntry) return { path, bytes };
 
-  if (!opts.missingImage) {
-    for (let i = 0; i < count; i++) await archive.addImage(`img_${i}.jpg`, A_JPEG);
-  }
-  if (opts.extraEntry) await archive.addImage(opts.extraEntry, A_JPEG);
-  // addImage appends a manifest entry, which is exactly what makes it *not*
-  // orphaned — remove the entry again so the zip carries a file nothing names.
-  if (opts.extraEntry) {
-    const manifest = archive.getManifest();
-    manifest.images = manifest.images.filter(img => img.filename !== opts.extraEntry);
-  }
-
-  return { path, bytes: await archive.export() };
+  // export() refuses to write what load() would refuse, so the image rules are
+  // broken afterwards, in the zip it wrote.
+  const zip = await JSZip.loadAsync(bytes);
+  if (opts.missingImage) zip.remove('img_0.jpg');
+  if (opts.extraEntry) zip.file(opts.extraEntry, A_JPEG);
+  return { path, bytes: await zip.generateAsync({ type: 'uint8array' }) };
 }
 
 /**
  * A valid v4 archive carrying no `id`, assembled zip-first.
  *
  * `R49Archive` cannot make one — `saveManifest` mints on every write — so the
- * only way to exercise check 5 is to write `manifest.json` directly.
+ * only way to exercise `archive/id` is to write `manifest.json` directly.
  */
 async function idlessArchive(): Promise<Uint8Array> {
   const zip = new JSZip();
@@ -117,30 +114,40 @@ describe('validate', () => {
       expect(result.scope).toBe('archives');
     });
 
-    it('reports bytes that are not a v4 archive as one load failure', async () => {
+    it('reports bytes that are not a zip under the format rule they break', async () => {
       const result = await reportFor({
         path: 'archives/alice/west-yard.r49',
         bytes: new Uint8Array([1, 2, 3, 4]),
       });
 
-      expect(codes(result.errors)).toEqual(['archive/load']);
+      expect(codes(result.errors)).toEqual(['archive/zip']);
       // The facts are unknown, not zero — a row still exists for the file.
       expect(result.images).toBeNull();
       expect(result.id).toBeNull();
+    });
+
+    it('reports a manifest that is not v4 under manifest/version', async () => {
+      const zip = new JSZip();
+      zip.file('manifest.json', JSON.stringify({ version: 3 }));
+      const result = await reportFor({
+        path: 'archives/alice/west-yard.r49',
+        bytes: await zip.generateAsync({ type: 'uint8array' }),
+      });
+      expect(codes(result.errors)).toEqual(['manifest/version']);
     });
 
     it('blocks a manifest naming an image the archive does not carry', async () => {
       const result = await reportFor(
         await build('archives/alice/west-yard.r49', { missingImage: true })
       );
-      expect(codes(result.errors)).toContain('images/missing');
+      expect(codes(result.errors)).toEqual(['images/missing']);
     });
 
     it('blocks an image nobody references', async () => {
       const result = await reportFor(
         await build('archives/alice/west-yard.r49', { extraEntry: 'stray.jpg' })
       );
-      expect(codes(result.errors)).toContain('images/orphan');
+      expect(codes(result.errors)).toEqual(['images/orphan']);
     });
 
     it('blocks an untouched proposal, and accepts a corrected one', async () => {
@@ -156,7 +163,8 @@ describe('validate', () => {
           labels: [car({ provenance: 'corrected', proposed_by: 'v1.0.0' })],
         })
       );
-      // Assisted labeling must survive the corpus, or #13's payoff dies here.
+      // Assisted labeling must survive the corpus, or rails49/occupancy#13's
+      // payoff dies here.
       expect(corrected.errors).toEqual([]);
     });
 
@@ -220,11 +228,11 @@ describe('validate', () => {
   });
 
   describe('warnings, which never block', () => {
-    it('warns below the minimum DPT without failing the run', async () => {
+    it('warns below the recommended DPT and accepts the archive', async () => {
       const report = await validate(
         [
           await build('archives/alice/west-yard.r49', {
-            // 10 px over 800 mm at HO is far below MIN_DPT.
+            // 10 px over 800 mm at HO is far below the recommended DPT.
             calibration: [
               { px: { x: 0, y: 0 }, world: { x: 0, y: 0, z: 0 } },
               { px: { x: 10, y: 0 }, world: { x: 800, y: 0, z: 0 } },
@@ -235,8 +243,10 @@ describe('validate', () => {
         { author: 'alice' }
       );
 
-      expect(codes(report.archives[0].warnings)).toContain('calibration/dpt');
-      expect(report.archives[0].dpt).toBeLessThan(MIN_DPT);
+      expect(codes(report.archives[0].warnings)).toEqual(['calibration/dpt']);
+      expect(report.archives[0].warnings[0].message).toContain(`recommended ${RECOMMENDED_DPT}`);
+      expect(report.archives[0].errors).toEqual([]);
+      expect(report.archives[0].dpt).toBeLessThan(RECOMMENDED_DPT);
       expect(report.ok).toBe(true);
     });
 

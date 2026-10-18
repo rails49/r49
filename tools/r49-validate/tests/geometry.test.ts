@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { obliquityOf, pointsOffReferencePlane } from '../src/geometry.ts';
-import type { ManifestData } from '@occupancy/r49';
+import type { ManifestData } from '@rails49/r49';
 
 /** A manifest carrying only what these two functions read. */
 function manifest(calibration: Record<string, unknown>): ManifestData {

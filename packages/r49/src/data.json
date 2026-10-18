@@ -1,5 +1,6 @@
 {
   "standard_gauge_mm": 1435,
+  "recommended_dpt": 20,
   "scale_ratios": { "G": 25, "O": 48, "S": 64, "HO": 87, "T": 120, "N": 160, "Z": 220 },
   "vocabulary": {
     "stock": {
