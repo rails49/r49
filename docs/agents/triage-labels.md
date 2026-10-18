@@ -12,4 +12,6 @@ The skills speak in terms of five canonical triage roles. This file maps those r
 
 When a skill mentions a role (e.g. "apply the AFK-ready triage label"), use the corresponding label string from this table.
 
+A parent issue, one whose slices name it under `## Parent`, never carries `ready-for-agent`. Only its slices do. The parent closes when its slices are closed.
+
 Edit the right-hand column to match whatever vocabulary you actually use.
