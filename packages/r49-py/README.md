@@ -15,7 +15,8 @@ Anything not exported there is internal and may change without notice.
 
 The scale table and the vocabulary are read from the TypeScript package's
 [`data.json`](../r49/src/data.json), linked into the package as
-`src/r49/data.json`; no value of them is declared in code.
+`src/r49/data.json`; no value of them is declared in code. The sdist holds a
+copy of the file in place of the link.
 
 ## Example
 
@@ -53,6 +54,7 @@ uv run pytest            # the conformance cases and the reader's own tests
 uv run ruff check .
 uv run black --check .
 uv run pyright
+uv build                 # the sdist, then the wheel from it
 ```
 
 Nothing is published yet.
