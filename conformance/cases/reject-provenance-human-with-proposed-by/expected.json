@@ -1,0 +1,5 @@
+{
+  "description": "proposed_by is forbidden on a human label.",
+  "result": "reject",
+  "rule": "manifest/provenance"
+}

@@ -1,0 +1,7 @@
+{
+  "description": "The same two points in G.",
+  "result": "accept",
+  "dpt": 574.0,
+  "residual": null,
+  "tolerance": 1e-09
+}

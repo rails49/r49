@@ -1,0 +1,5 @@
+{
+  "description": "A label with no provenance: no default, which would pass model output off as a person's.",
+  "result": "reject",
+  "rule": "manifest/provenance"
+}

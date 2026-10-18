@@ -1,0 +1,66 @@
+{
+  "version": 4,
+  "layout": {
+    "name": "Test Layout",
+    "scale": "HO",
+    "calibration": {
+      "points": []
+    },
+    "sensors": []
+  },
+  "camera": {
+    "resolution": {
+      "width": 1920,
+      "height": 1080
+    }
+  },
+  "images": [
+    {
+      "filename": "a.jpg",
+      "labeled_complete": true,
+      "labels": [
+        {
+          "id": "a",
+          "class": "stock",
+          "p0": {
+            "x": 10,
+            "y": 20
+          },
+          "p1": {
+            "x": 110,
+            "y": 25
+          },
+          "provenance": "human"
+        },
+        {
+          "id": "b",
+          "class": "stock",
+          "p0": {
+            "x": 10,
+            "y": 20
+          },
+          "p1": {
+            "x": 110,
+            "y": 25
+          },
+          "provenance": "proposed",
+          "proposed_by": "v1.0.0"
+        },
+        {
+          "id": "c",
+          "class": "stock.loco.steam",
+          "p0": {
+            "x": 10,
+            "y": 20
+          },
+          "p1": {
+            "x": 110,
+            "y": 25
+          },
+          "provenance": "corrected",
+          "proposed_by": "v2"
+        }
+      ]
+    }
+  ]
+}

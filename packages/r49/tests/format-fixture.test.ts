@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import { readFile } from 'node:fs/promises';
 import { fileURLToPath } from 'node:url';
-import { R49Archive, getDPT, getDPTResidual } from '../src/index.ts';
+import { R49Archive } from '../src/index.ts';
 
 /**
  * The one thing `archive.test.ts` structurally cannot prove.
@@ -13,14 +13,15 @@ import { R49Archive, getDPT, getDPTResidual } from '../src/index.ts';
  * once and is never regenerated, so it is the only artifact here that can fail
  * that way.
  *
- * Deliberately small: this is a compatibility contract, not a second pass over
- * the library. It asserts that the committed bytes still load as v4, still
- * report the same geometry, and still yield their image — plus the two fields
- * most likely to be broken silently, the `provenance` union and the archive id.
+ * That the committed bytes still load as v4 and report the same DPT and
+ * residual is the conformance case `format-v4`, which every implementation
+ * runs. What only this package can check stays here: that they still yield
+ * their image, plus the two fields most likely to be broken silently, the
+ * `provenance` union and the archive id.
  *
  * **If this fails, the change under test breaks v4 and needs a version bump.**
  * Regenerating the fixture to make it pass destroys the only thing it does.
- * See `tests/fixtures/README.md`.
+ * See `conformance/cases/format-v4/README.md`.
  */
 
 const FIXTURE = fileURLToPath(new URL('../../../conformance/cases/format-v4/archive.r49', import.meta.url));
@@ -30,21 +31,6 @@ async function loadFixture(): Promise<R49Archive> {
 }
 
 describe('the frozen v4 fixture', () => {
-  it('still loads', async () => {
-    const manifest = (await loadFixture()).getManifest();
-    expect(manifest.version).toBe(4);
-    expect(manifest.layout.scale).toBe('HO');
-  });
-
-  it('still reports the geometry it was written with', async () => {
-    const manifest = (await loadFixture()).getManifest();
-
-    // Fitted over the three equal-height pairs; the fourth point sits at a
-    // different z and is inert, which is itself part of what is pinned here.
-    expect(getDPT(manifest)).toBeCloseTo(16.58850574712644, 10);
-    expect(getDPTResidual(manifest)).toBeCloseTo(5.3452248382484875, 10);
-  });
-
   it('still yields its image bytes', async () => {
     const bytes = await (await loadFixture()).getImage('frame.jpg');
     expect(bytes).not.toBeNull();

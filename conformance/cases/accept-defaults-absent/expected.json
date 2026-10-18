@@ -1,0 +1,6 @@
+{
+  "description": "calibration, sensors, images[].labeled_complete and images[].labels all absent.",
+  "result": "accept",
+  "dpt": null,
+  "residual": null
+}

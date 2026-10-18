@@ -1,0 +1,6 @@
+{
+  "description": "Label ids are unique within one image, not across images.",
+  "result": "accept",
+  "dpt": null,
+  "residual": null
+}

@@ -1,0 +1,5 @@
+{
+  "description": "Zero bytes.",
+  "result": "reject",
+  "rule": "archive/zip"
+}

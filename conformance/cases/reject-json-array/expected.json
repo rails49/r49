@@ -1,0 +1,5 @@
+{
+  "description": "manifest.json holds an array, not an object.",
+  "result": "reject",
+  "rule": "manifest/json"
+}

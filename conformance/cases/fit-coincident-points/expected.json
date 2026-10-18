@@ -1,0 +1,6 @@
+{
+  "description": "Two points 0 mm apart: the fit's denominator is 0, so DPT does not resolve.",
+  "result": "accept",
+  "dpt": null,
+  "residual": null
+}

@@ -1,0 +1,6 @@
+{
+  "description": "An image may sit in a folder; its filename is its path in the zip.",
+  "result": "accept",
+  "dpt": null,
+  "residual": null
+}

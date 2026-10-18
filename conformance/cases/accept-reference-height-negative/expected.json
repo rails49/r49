@@ -1,0 +1,7 @@
+{
+  "description": "reference_height_mm may be any number, negative included.",
+  "result": "accept",
+  "dpt": 164.9425287356322,
+  "residual": null,
+  "tolerance": 1e-09
+}

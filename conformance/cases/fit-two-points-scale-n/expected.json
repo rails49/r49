@@ -1,0 +1,7 @@
+{
+  "description": "The same two points in N: DPT scales by the gauge.",
+  "result": "accept",
+  "dpt": 89.6875,
+  "residual": null,
+  "tolerance": 1e-09
+}

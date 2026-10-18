@@ -1,0 +1,12 @@
+{
+  "version": 4,
+  "layout": {
+    "name": "Test Layout",
+    "scale": "HO",
+    "calibration": {
+      "points": []
+    },
+    "sensors": []
+  },
+  "images": []
+}

@@ -1,0 +1,5 @@
+{
+  "description": "A v3 archive as v3 wrote it.",
+  "result": "reject",
+  "rule": "manifest/version"
+}

@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import JSZip from 'jszip';
 import { R49Archive, R49Error, getDPT, getDPTResidual } from '../src/index.ts';
-import type { FormatRuleId, ManifestData } from '../src/index.ts';
+import type { ManifestData } from '../src/index.ts';
 
 // One seam: the archive. Every test here drives the package's public interface
 // — build or load an archive, mutate the manifest, export, reload the bytes,
@@ -10,6 +10,11 @@ import type { FormatRuleId, ManifestData } from '../src/index.ts';
 // intermediate: the schemas are deliberately withheld from index.ts so that
 // validation stays replaceable, and a test that pinned them down would undo
 // that.
+//
+// What any reader must decide the same way — accept or refuse, with which rule
+// id, and the DPT and residual — is in conformance/cases/ and runs in
+// conformance.test.ts. What stays here is this package's own: writing, minting
+// and keeping an archive id, and what a loaded manifest holds.
 
 /** A minimal valid v4 manifest, spread-and-overridden per test. */
 function manifest(overrides: Record<string, unknown> = {}): ManifestData {
@@ -45,24 +50,6 @@ function rejection(data: unknown): R49Error {
     throw err;
   }
   throw new Error('expected the manifest to be rejected, but it was accepted');
-}
-
-/** Assert that loading these bytes is rejected, and return the rule id. */
-async function loadRule(bytes: Uint8Array): Promise<FormatRuleId> {
-  try {
-    await R49Archive.load(bytes);
-  } catch (err) {
-    if (err instanceof R49Error) return err.rule;
-    throw err;
-  }
-  throw new Error('expected the archive to be rejected, but it was accepted');
-}
-
-/** Zip these entries as they are, bypassing the writer. */
-async function zip(entries: Record<string, string | Uint8Array>): Promise<Uint8Array> {
-  const z = new JSZip();
-  for (const [name, data] of Object.entries(entries)) z.file(name, data);
-  return await z.generateAsync({ type: 'uint8array' });
 }
 
 const car = (over: Record<string, unknown> = {}) => ({
@@ -175,102 +162,7 @@ describe('R49Archive', () => {
     });
   });
 
-  describe('version', () => {
-    it('rejects a v3 manifest, naming the version', () => {
-      const err = rejection({
-        version: 3,
-        layout: { name: 'Old', scale: 'N', calibration: { p0: { x: 0, y: 0 }, p1: { x: 1, y: 1 }, size_mm: 1 } },
-        camera: { resolution: { width: 640, height: 480 } },
-        images: [{ filename: '1.jpg', labels: {} }],
-      });
-      expect(err.rule).toBe('manifest/version');
-      expect(err.message).toContain('3');
-    });
-
-    it('rejects a v3 archive on load, naming the version', async () => {
-      // Build v3 bytes the way v3 wrote them, bypassing the v4 validator.
-      const bytes = await zip({
-        'manifest.json': JSON.stringify({
-          version: 3,
-          layout: { scale: 'N' },
-          camera: { resolution: { width: 640, height: 480 } },
-          images: [{ filename: '1.jpg', labels: { m1: { x: 1, y: 2, type: 'track' } } }],
-        }),
-        '1.jpg': new Uint8Array([0xff, 0xd8]),
-      });
-
-      expect(await loadRule(bytes)).toBe('manifest/version');
-    });
-  });
-
-  describe('schema invariants, at the boundary', () => {
-    it('rejects proposed_by on a human label', () => {
-      const m = manifest({
-        images: [{ filename: 'a.jpg', labels: [car({ provenance: 'human', proposed_by: 'v1' })] }],
-      });
-      expect(rejection(m).rule).toBe('manifest/provenance');
-    });
-
-    it('rejects a missing proposed_by on proposed and on corrected', () => {
-      for (const provenance of ['proposed', 'corrected']) {
-        const m = manifest({
-          images: [{ filename: 'a.jpg', labels: [car({ provenance })] }],
-        });
-        expect(rejection(m).rule, `${provenance} without proposed_by`).toBe('manifest/provenance');
-      }
-    });
-
-    it('rejects a missing provenance', () => {
-      const { provenance: _omitted, ...withoutProvenance } = car();
-      const m = manifest({
-        images: [{ filename: 'a.jpg', labels: [withoutProvenance] }],
-      });
-      expect(rejection(m).rule).toBe('manifest/provenance');
-    });
-
-    it('rejects duplicate ids within one collection', () => {
-      const dupLabels = manifest({
-        images: [{ filename: 'a.jpg', labels: [car({ id: 'x' }), car({ id: 'x' })] }],
-      });
-      expect(rejection(dupLabels).rule).toBe('manifest/duplicate-id');
-
-      const dupSensors = manifest({
-        layout: {
-          scale: 'N', calibration: { points: [] },
-          sensors: [{ id: 'x', x: 1, y: 1 }, { id: 'x', x: 2, y: 2 }],
-        },
-      });
-      expect(rejection(dupSensors).rule).toBe('manifest/duplicate-id');
-    });
-
-    it('accepts an id shared between a sensor and a label', async () => {
-      // Separate namespaces, never compared.
-      const loaded = await roundTrip(manifest({
-        layout: { scale: 'N', calibration: { points: [] }, sensors: [{ id: 'shared', x: 1, y: 1 }] },
-        images: [{ filename: 'a.jpg', labels: [car({ id: 'shared' })] }],
-      }));
-
-      expect(loaded.getManifest().layout.sensors[0].id).toBe('shared');
-      expect(loaded.getManifest().images[0].labels[0].id).toBe('shared');
-    });
-
-    it('accepts an out-of-vocabulary class string', async () => {
-      // Pruning the vocabulary must not lock anyone out of their own files.
-      const loaded = await roundTrip(manifest({
-        images: [{ filename: 'a.jpg', labels: [car({ class: 'not.in.any.vocabulary' })] }],
-      }));
-      expect(loaded.getManifest().images[0].labels[0].class).toBe('not.in.any.vocabulary');
-    });
-
-    it('rejects a missing scale rather than defaulting it', () => {
-      // v3 defaulted this to 'N'. DPT = s · gauge_mm(scale), so a silently
-      // assumed scale reports a DPT wrong by the ratio between the two — up
-      // to 8.8x between Z and G. FORMAT.md allows only its *reads as*
-      // defaults, and this is not one of them.
-      const m = manifest({ layout: { calibration: { points: [] }, sensors: [] } });
-      expect(rejection(m).rule).toBe('manifest/field');
-    });
-
+  describe('defaults, as read back', () => {
     it('defaults an absent calibration to empty points', async () => {
       const loaded = await roundTrip(manifest({ layout: { scale: 'N' } }));
       expect(loaded.getManifest().layout.calibration).toEqual({ points: [] });
@@ -284,124 +176,6 @@ describe('R49Archive', () => {
       expect(image.labels).toEqual([]);
     });
 
-    it('accepts an image marked complete with zero cars', async () => {
-      // A legitimate all-background sample, not a gap.
-      const loaded = await roundTrip(manifest({
-        images: [{ filename: 'a.jpg', labeled_complete: true, labels: [] }],
-      }));
-      expect(loaded.getManifest().images[0].labeled_complete).toBe(true);
-    });
-  });
-
-  describe('getDPT', () => {
-    /** HO gauge in mm: 1435 / 87. */
-    const HO_GAUGE = 1435 / 87;
-
-    function dptOf(points: ReturnType<typeof cal>[], scale = 'HO') {
-      return getDPT(manifest({ layout: { scale, calibration: { points }, sensors: [] } }));
-    }
-
-    it('gives the v3 answer for two coplanar points', () => {
-      // 100 px over 10 mm => 10 px/mm, the d_px / d_mm the v3 code computed.
-      expect(dptOf([cal([0, 0], [0, 0]), cal([100, 0], [10, 0])])).toBeCloseTo(10 * HO_GAUGE, 10);
-    });
-
-    it('is unmoved by a third point at a different z', () => {
-      const base = [cal([0, 0], [0, 0]), cal([100, 0], [10, 0])];
-      const withOffPlane = [...base, cal([500, 500], [1, 1, 25])];
-      // Off-plane points are stored but inert.
-      expect(dptOf(withOffPlane)).toBeCloseTo(dptOf(base)!, 10);
-    });
-
-    it('returns null for empty, single-point, and all-different-height cases', () => {
-      expect(dptOf([])).toBeNull();
-      expect(dptOf([cal([0, 0], [0, 0])])).toBeNull();
-      expect(dptOf([cal([0, 0], [0, 0, 1]), cal([100, 0], [10, 0, 2])])).toBeNull();
-    });
-
-    it('returns null for coincident points rather than dividing by zero', () => {
-      const result = dptOf([cal([0, 0], [5, 5]), cal([100, 100], [5, 5])]);
-      expect(result).toBeNull();
-    });
-
-    it('weights a long baseline over a short one', () => {
-      // Three coplanar points, so all three pairs enter the fit:
-      //   origin–far   1000 px / 100 mm  => 10.0 px/mm   (long)
-      //   origin–near    20 px /   1 mm  => 20.0 px/mm   (short, disagrees)
-      //   near–far      980 px /  99 mm  =>  9.9 px/mm   (long)
-      const origin = cal([0, 0], [0, 0]);
-      const near = cal([20, 0], [1, 0]);
-      const far = cal([1000, 0], [100, 0]);
-
-      const fitted = dptOf([origin, near, far])! / HO_GAUGE;
-
-      // An unweighted mean of the three pair ratios would be ~13.3. The d_mm²
-      // weighting instead lands within 1% of the two long baselines and all
-      // but ignores the short one, which is the bias the fit exists to have:
-      // click error is a fixed number of pixels, so short baselines are
-      // proportionally noisier.
-      const unweightedMean = (10 + 20 + 980 / 99) / 3;
-      expect(unweightedMean).toBeGreaterThan(13);
-
-      expect(fitted).toBeGreaterThan(9.9);
-      expect(fitted).toBeLessThan(10.0);
-      expect(Math.abs(fitted - 20)).toBeGreaterThan(Math.abs(fitted - 10) * 50);
-    });
-
-    it('scales by the gauge ratio when the scale changes', () => {
-      const points = [cal([0, 0], [0, 0]), cal([100, 0], [10, 0])];
-      const ho = dptOf(points, 'HO')!;
-      const n = dptOf(points, 'N')!;
-      // gauge_HO / gauge_N == ratio_N / ratio_HO == 160 / 87
-      expect(ho / n).toBeCloseTo(160 / 87, 10);
-    });
-  });
-
-  describe('getDPTResidual', () => {
-    function residualOf(points: ReturnType<typeof cal>[], scale = 'HO') {
-      return getDPTResidual(manifest({ layout: { scale, calibration: { points }, sensors: [] } }));
-    }
-
-    it('is null while the fit is exact by construction', () => {
-      // Nothing to fit, nothing over-determined: no pair, and the single pair
-      // a two-point calibration gives, both reproduce themselves exactly, so a
-      // residual of zero would claim agreement nobody checked.
-      expect(residualOf([])).toBeNull();
-      expect(residualOf([cal([0, 0], [0, 0])])).toBeNull();
-      expect(residualOf([cal([0, 0], [0, 0]), cal([100, 0], [10, 0])])).toBeNull();
-    });
-
-    it('is null when no scale resolves at all', () => {
-      // Three points, three pairs, every one of them zero millimetres apart.
-      expect(residualOf([cal([0, 0], [5, 5]), cal([50, 0], [5, 5]), cal([99, 0], [5, 5])])).toBeNull();
-    });
-
-    it('is zero when three coplanar points agree', () => {
-      const points = [cal([0, 0], [0, 0]), cal([100, 0], [10, 0]), cal([200, 0], [20, 0])];
-      expect(residualOf(points)).toBeCloseTo(0, 10);
-    });
-
-    it('reports a mistyped coordinate in image pixels', () => {
-      // The third point's world y is 200 mm where the pixels say 20 mm — the
-      // millimetre/pixel confusion the readout exists to make visible.
-      const points = [cal([0, 0], [0, 0]), cal([100, 0], [10, 0]), cal([200, 0], [200, 0])];
-      const residual = residualOf(points)!;
-      expect(residual).toBeGreaterThan(10);
-      // RMS over the three pairs of (d_px - s·d_mm), s = 60000/76100 px/mm.
-      expect(residual).toBeCloseTo(65.2, 1);
-    });
-
-    it('ignores pairs at a different height, exactly as the fit does', () => {
-      const coplanar = [cal([0, 0], [0, 0]), cal([100, 0], [10, 0]), cal([200, 0], [20, 0])];
-      // An off-plane point disagrees wildly and still contributes nothing: it
-      // pairs with nothing at its own z, and cross-height pairs never enter.
-      expect(residualOf([...coplanar, cal([9999, 9999], [1, 1, 30])])).toBeCloseTo(0, 10);
-    });
-
-    it('is unaffected by the scale, being a pixel-domain quantity', () => {
-      const points = [cal([0, 0], [0, 0]), cal([100, 0], [10, 0]), cal([200, 0], [30, 0])];
-      expect(residualOf(points, 'N')).toBeCloseTo(residualOf(points, 'G')!, 10);
-    });
   });
 
   describe('image management', () => {
@@ -447,54 +221,6 @@ describe('R49Archive', () => {
       archive.removeImage('a.jpg');
       expect(archive.getManifest().images).toHaveLength(0);
       expect(await archive.getImage('a.jpg')).toBeNull();
-    });
-  });
-
-  describe('format rules on load', () => {
-    const valid = JSON.stringify(manifest({ images: [{ filename: 'a.jpg' }] }));
-    const jpeg = new Uint8Array([0xff, 0xd8]);
-
-    it('accepts a manifest and the images it names, nothing more', async () => {
-      await expect(R49Archive.load(await zip({ 'manifest.json': valid, 'a.jpg': jpeg }))).resolves.toBeInstanceOf(R49Archive);
-    });
-
-    it('refuses empty bytes and bytes that are not a zip', async () => {
-      expect(await loadRule(new Uint8Array())).toBe('archive/zip');
-      expect(await loadRule(new TextEncoder().encode(valid))).toBe('archive/zip');
-    });
-
-    it('refuses a zip with no manifest.json at its root', async () => {
-      expect(await loadRule(await zip({ 'a.jpg': jpeg }))).toBe('manifest/missing');
-      expect(await loadRule(await zip({ 'sub/manifest.json': valid, 'a.jpg': jpeg }))).toBe('manifest/missing');
-    });
-
-    it('refuses a manifest that is not UTF-8 JSON naming an object', async () => {
-      expect(await loadRule(await zip({ 'manifest.json': '{ "version": 4,', 'a.jpg': jpeg }))).toBe('manifest/json');
-      expect(await loadRule(await zip({ 'manifest.json': '[]', 'a.jpg': jpeg }))).toBe('manifest/json');
-      expect(await loadRule(await zip({ 'manifest.json': 'null', 'a.jpg': jpeg }))).toBe('manifest/json');
-      // A lone 0xff is never UTF-8. Decoded leniently it becomes U+FFFD inside
-      // a string and the manifest would load, silently changed.
-      const invalid = new TextEncoder().encode(valid);
-      invalid[valid.indexOf('Layout')] = 0xff;
-      expect(await loadRule(await zip({ 'manifest.json': invalid, 'a.jpg': jpeg }))).toBe('manifest/json');
-    });
-
-    it('refuses a number JSON can spell but not hold', async () => {
-      // 1e999 parses to Infinity, which no field of the format can carry.
-      const text = valid.replace('"width":1920', '"width":1e999');
-      const calibrated = JSON.stringify(manifest({
-        layout: { scale: 'HO', calibration: { points: [cal([0, 0], [0, 0])] } },
-      })).replace('"x":0', '"x":1e999');
-      expect(await loadRule(await zip({ 'manifest.json': text, 'a.jpg': jpeg }))).toBe('manifest/field');
-      expect(await loadRule(await zip({ 'manifest.json': calibrated }))).toBe('manifest/field');
-    });
-
-    it('refuses an image the manifest names and the zip lacks', async () => {
-      expect(await loadRule(await zip({ 'manifest.json': valid }))).toBe('images/missing');
-    });
-
-    it('refuses a file in the zip that no image names', async () => {
-      expect(await loadRule(await zip({ 'manifest.json': valid, 'a.jpg': jpeg, 'b.jpg': jpeg }))).toBe('images/orphan');
     });
   });
 
@@ -577,18 +303,18 @@ describe('R49Archive', () => {
       expect(again.getManifest().id).toBe(minted);
     });
 
-    it('rejects an empty id rather than treating it as absent', () => {
-      expect(rejection(manifest({ id: '' })).rule).toBe('manifest/field');
-    });
   });
 
   // Strictness is per object in zod, so it has to be asserted per object:
   // a schema that gained a nested object without `.strict()` would pass every
   // test above while silently deleting whatever a newer build wrote into it.
-  describe('unknown keys are rejected, not stripped', () => {
+  // That each object refuses an unknown key is the conformance cases'
+  // (`reject-unknown-key-*`); they assert the rule id and cannot see a message.
+  describe('an unknown-key refusal names the key, in every object', () => {
     // Asserted on the *offending key*, not on the wording. The message is
-    // reworded for the person who meets it (rails49/occupancy#139) and may be reworded again;
-    // what must never change is that the refusal names what was wrong.
+    // reworded for the person who meets it (rails49/occupancy#139) and may be
+    // reworded again; what must never change is that the refusal names what
+    // was wrong.
     const cases: Array<[string, Record<string, unknown>, string]> = [
       ['the manifest root', manifest({ vendor_extra: 1 }), 'vendor_extra'],
       ['layout', manifest({ layout: { scale: 'HO', calibration: { points: [] }, sensors: [], hue: 1 } }), 'layout.hue'],
@@ -644,10 +370,8 @@ describe('R49Archive', () => {
     ];
 
     for (const [where, data, key] of cases) {
-      it(`rejects an unknown key in ${where}`, () => {
-        const err = rejection(data);
-        expect(err.rule).toBe('manifest/unknown-key');
-        expect(err.message).toContain(key);
+      it(`in ${where}`, () => {
+        expect(rejection(data).message).toContain(key);
       });
     }
 

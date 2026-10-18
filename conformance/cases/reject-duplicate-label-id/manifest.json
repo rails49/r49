@@ -1,0 +1,50 @@
+{
+  "version": 4,
+  "layout": {
+    "name": "Test Layout",
+    "scale": "HO",
+    "calibration": {
+      "points": []
+    },
+    "sensors": []
+  },
+  "camera": {
+    "resolution": {
+      "width": 1920,
+      "height": 1080
+    }
+  },
+  "images": [
+    {
+      "filename": "a.jpg",
+      "labels": [
+        {
+          "id": "x",
+          "class": "stock",
+          "p0": {
+            "x": 10,
+            "y": 20
+          },
+          "p1": {
+            "x": 110,
+            "y": 25
+          },
+          "provenance": "human"
+        },
+        {
+          "id": "x",
+          "class": "stock",
+          "p0": {
+            "x": 10,
+            "y": 20
+          },
+          "p1": {
+            "x": 110,
+            "y": 25
+          },
+          "provenance": "human"
+        }
+      ]
+    }
+  ]
+}

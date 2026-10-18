@@ -1,0 +1,5 @@
+{
+  "description": "Two labels in one image share an id.",
+  "result": "reject",
+  "rule": "manifest/duplicate-id"
+}

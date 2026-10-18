@@ -1,0 +1,6 @@
+{
+  "description": "The reference plane above the camera: DPT does not resolve.",
+  "result": "accept",
+  "dpt": null,
+  "residual": null
+}

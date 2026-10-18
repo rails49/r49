@@ -1,0 +1,7 @@
+{
+  "description": "Two planes consistent with a 1150 mm camera: residual 0 at the true height.",
+  "result": "accept",
+  "dpt": 19.99103448275862,
+  "residual": 0.0,
+  "tolerance": 1e-09
+}

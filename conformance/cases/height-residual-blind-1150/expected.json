@@ -1,0 +1,7 @@
+{
+  "description": "Every point at one height: the residual cannot see the camera height (compare height-residual-blind-300).",
+  "result": "accept",
+  "dpt": 19.99103448275862,
+  "residual": 0.0,
+  "tolerance": 1e-09
+}

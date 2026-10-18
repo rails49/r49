@@ -1,0 +1,7 @@
+{
+  "description": "Calibrated at z 0, track at 85 mm, camera at 1150 mm: DPT is reported on the reference plane, 1150/1065 larger.",
+  "result": "accept",
+  "dpt": 178.10695591171554,
+  "residual": null,
+  "tolerance": 1e-09
+}

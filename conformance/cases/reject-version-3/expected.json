@@ -1,0 +1,5 @@
+{
+  "description": "A v3 manifest: refused on the version before anything else is read.",
+  "result": "reject",
+  "rule": "manifest/version"
+}

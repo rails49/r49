@@ -1,0 +1,7 @@
+{
+  "description": "d_mm\u00b2 weighting: a 1 mm baseline at 20 px/mm barely moves a fit dominated by two ~100 mm baselines at ~10 px/mm.",
+  "result": "accept",
+  "dpt": 164.1262289772193,
+  "residual": 7.1063316486110155,
+  "tolerance": 1e-09
+}

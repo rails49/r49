@@ -1,0 +1,5 @@
+{
+  "description": "An unknown key in px: refused, not ignored.",
+  "result": "reject",
+  "rule": "manifest/unknown-key"
+}

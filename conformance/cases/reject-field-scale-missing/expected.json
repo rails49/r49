@@ -1,0 +1,5 @@
+{
+  "description": "No scale: required, with no default, because DPT depends on it.",
+  "result": "reject",
+  "rule": "manifest/field"
+}

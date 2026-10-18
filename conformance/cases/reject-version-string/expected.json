@@ -1,0 +1,5 @@
+{
+  "description": "The version as a string.",
+  "result": "reject",
+  "rule": "manifest/version"
+}

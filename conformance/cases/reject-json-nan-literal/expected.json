@@ -1,0 +1,5 @@
+{
+  "description": "NaN is not JSON (rails49/occupancy#190).",
+  "result": "reject",
+  "rule": "manifest/json"
+}

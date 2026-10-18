@@ -1,0 +1,5 @@
+{
+  "description": "An empty archive id is not an absent one.",
+  "result": "reject",
+  "rule": "manifest/field"
+}

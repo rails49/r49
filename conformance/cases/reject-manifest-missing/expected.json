@@ -1,0 +1,5 @@
+{
+  "description": "A zip holding an image and no manifest.json.",
+  "result": "reject",
+  "rule": "manifest/missing"
+}

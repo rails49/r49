@@ -1,0 +1,5 @@
+{
+  "description": "A version from the future.",
+  "result": "reject",
+  "rule": "manifest/version"
+}
