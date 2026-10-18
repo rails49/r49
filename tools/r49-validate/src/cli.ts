@@ -3,7 +3,8 @@ import { dirname, join } from 'node:path';
 import { parseArgs } from 'node:util';
 import { validate, type ArchiveInput } from './validate.ts';
 import { checkGuidance, guidanceTable, REFERENCE_WIDTH_PX } from './guidance.ts';
-import { handleOf } from './corpus.ts';
+import { handleOf, inCorpus } from './corpus.ts';
+import { readerDisagreements, readOutcome, type ReaderOutcome } from './readers.ts';
 import type { ArchiveReport, Report } from './report.ts';
 
 /**
@@ -32,10 +33,13 @@ r49-validate <path>...            validate submitted .r49 files
 r49-validate guidance             print the capture-guidance table
 r49-validate guidance --check <path>
                                   check a document's generated block against it
+r49-validate readers --python <report.json> <path>...
+                                  compare read.py's outcomes with this package's
 
 Options:
   --author <handle>   the pull request author, for the directory-ownership rule
   --check <path>      guidance only; verify instead of print. Exit 1 on drift.
+  --python <path>     readers only; the JSON read.py wrote. Exit 1 on any difference.
   --width <px>        guidance only; reference frame width (default ${REFERENCE_WIDTH_PX})
 `.trim();
 
@@ -134,6 +138,32 @@ async function main(argv: readonly string[]): Promise<number> {
     return 0;
   }
 
+  if (argv[0] === 'readers') {
+    const { values, positionals } = parseArgs({
+      args: [...argv.slice(1)],
+      options: { python: { type: 'string' } },
+      allowPositionals: true,
+    });
+    if (values.python === undefined) {
+      process.stderr.write(USAGE + '\n');
+      return 2;
+    }
+
+    const python = JSON.parse(await readFile(values.python, 'utf8')) as ReaderOutcome[];
+    const typescript: ReaderOutcome[] = [];
+    for (const path of positionals) {
+      typescript.push(await readOutcome({ path, bytes: await readFile(path) }));
+    }
+
+    const disagreements = readerDisagreements(typescript, python);
+    for (const line of disagreements) process.stderr.write(`❌ ${line}\n`);
+    process.stderr.write(
+      `${typescript.length} archive(s): the Python and TypeScript packages ` +
+        `${disagreements.length === 0 ? 'agree' : `disagree ${disagreements.length} time(s)`}.\n`
+    );
+    return disagreements.length === 0 ? 0 : 1;
+  }
+
   const { values, positionals } = parseArgs({
     args: [...argv],
     options: { author: { type: 'string' }, help: { type: 'boolean' } },
@@ -145,14 +175,21 @@ async function main(argv: readonly string[]): Promise<number> {
     return values.help ? 0 : 2;
   }
 
+  // Only archives/ and fixtures/ are the corpus. Anything else, such as the
+  // conformance cases, is not a submission and is not judged as one.
+  const paths = positionals.filter(inCorpus);
+  for (const path of positionals.filter(p => !inCorpus(p))) {
+    process.stderr.write(`skipped ${path}: not under archives/ or fixtures/\n`);
+  }
+
   const submitted: ArchiveInput[] = [];
-  for (const path of positionals) {
+  for (const path of paths) {
     submitted.push({ path, bytes: await readFile(path) });
   }
 
   const report = await validate(submitted, {
     author: values.author ?? null,
-    siblings: await siblingsOf(positionals),
+    siblings: await siblingsOf(paths),
   });
 
   process.stdout.write(JSON.stringify(report, null, 2) + '\n');
