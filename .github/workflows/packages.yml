@@ -1,0 +1,129 @@
+# Both packages, as an outside reader gets them. Each is linted and tested from
+# source, then built, installed into a clean directory, and run against every
+# conformance case from there — so a package that ships without data/r49.json,
+# or without a module the source tree happened to resolve, fails here and not
+# on someone else's machine. Then the Python package reads the archives the
+# TypeScript writer produced, which is the writer's conformance seam.
+#
+# release.yml calls this before it publishes anything.
+name: packages
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+  workflow_call:
+
+permissions:
+  contents: read
+
+jobs:
+  python:
+    name: python (rails49-r49)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: astral-sh/setup-uv@v5
+
+      - name: Lint and typecheck
+        run: |
+          uv sync --locked --all-packages
+          for project in python tools/r49-validate; do
+            (cd "$project" && uv run --locked ruff check . && uv run --locked black --check . \
+              && uv run --locked pyright)
+          done
+
+      - name: Test from source
+        run: |
+          uv run --locked --package rails49-r49 pytest -q python
+          uv run --locked --package r49-validate pytest -q tools/r49-validate
+
+      - name: Build
+        run: uv build --package rails49-r49 --out-dir "$RUNNER_TEMP/dist"
+
+      # Outside the checkout, so `import r49` can only find the installed wheel.
+      - name: Run the conformance cases against the installed wheel
+        run: |
+          clean="$RUNNER_TEMP/clean"
+          uv venv "$clean/venv"
+          uv pip install --python "$clean/venv" "$RUNNER_TEMP"/dist/*.whl pytest
+          cp python/tests/test_conformance.py "$clean/"
+          cd "$clean"
+          R49_CONFORMANCE="$GITHUB_WORKSPACE/conformance" \
+            venv/bin/python -I -m pytest -q -p no:cacheprovider test_conformance.py
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: python-dist
+          path: ${{ runner.temp }}/dist
+
+  typescript:
+    name: typescript (@rails49/r49)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: pnpm/action-setup@v6
+      - uses: actions/setup-node@v7
+        with:
+          node-version-file: .nvmrc
+
+      # No pnpm-lock.yaml is committed yet: it could not be generated where the
+      # package was written. Commit the one this step produces and switch to
+      # --frozen-lockfile.
+      - name: Install
+        run: pnpm install --no-frozen-lockfile
+
+      - name: Typecheck
+        run: pnpm --filter @rails49/r49 typecheck
+
+      # R49_WRITE_CASES keeps every archive the writer test produced, for the
+      # cross-reading job below.
+      - name: Test from source
+        env:
+          R49_WRITE_CASES: ${{ runner.temp }}/written
+        run: pnpm --filter @rails49/r49 test
+
+      - name: Build and pack
+        working-directory: ts
+        run: |
+          pnpm build
+          test -f dist/r49.json || { echo "dist/r49.json is missing" >&2; exit 1; }
+          mkdir -p "$RUNNER_TEMP/dist"
+          pnpm pack --pack-destination "$RUNNER_TEMP/dist"
+
+      - name: Run the conformance cases against the installed package
+        run: |
+          clean="$RUNNER_TEMP/clean"
+          mkdir -p "$clean"
+          cd "$clean"
+          npm init -y >/dev/null
+          npm pkg set type=module
+          npm install "$RUNNER_TEMP"/dist/*.tgz
+          cp "$GITHUB_WORKSPACE/ts/scripts/conformance.mjs" .
+          node conformance.mjs "$GITHUB_WORKSPACE/conformance"
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: npm-dist
+          path: ${{ runner.temp }}/dist
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: written-by-typescript
+          path: ${{ runner.temp }}/written
+
+  cross:
+    name: python reads what typescript wrote
+    needs: [python, typescript]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: astral-sh/setup-uv@v5
+      - uses: actions/download-artifact@v4
+        with:
+          name: written-by-typescript
+          path: ${{ runner.temp }}/written
+      - name: Run the written archives through the Python package
+        env:
+          R49_CONFORMANCE: ${{ runner.temp }}/written
+        run: uv run --locked --package rails49-r49 pytest -q python/tests/test_conformance.py
