@@ -5,8 +5,9 @@ the people who took them. This is the training data behind
 [rails49](https://github.com/rails49/occupancy), which detects track occupancy from
 a camera instead of from block detectors.
 
-**Everything here is [CC BY 4.0](LICENSE).** Use it, train on it, redistribute
-it — credit the photographer.
+**The archives are [CC BY 4.0](LICENSE).** Use them, train on them,
+redistribute them — credit the photographer. See [Licences](#licences) for the
+code.
 
 > ⚠️ The classifier this data feeds does sometimes miss rolling stock and does
 > sometimes report phantom trains. Nothing built from this corpus should be
@@ -19,7 +20,20 @@ schema version 4: the layout's scale, a calibration that ties image pixels to
 real millimetres, sensor points, and — per image — the cars, each a two-point
 span along its centerline carrying a record of who authored it.
 
-You make one with the [editor](https://occupancy.rails49.org). It runs entirely in the
+The format is defined here, in **[FORMAT.md](FORMAT.md)**: every manifest
+field, the calibration fit, the rules a reader applies, and which rules are this
+corpus's own. You can write a reader from it in any language, or use one of the
+two this repository publishes:
+
+* **Python**, read-only: `pip install rails49-r49`, then `import r49`. See
+  [`python/`](python/).
+* **TypeScript**, read and write: `npm install @rails49/r49`. See [`ts/`](ts/).
+
+Both read the scales, gauge and vocabulary from one data file,
+[`data/r49.json`](data/r49.json), and both pass every case in
+[`conformance/`](conformance/).
+
+You make an archive with the [editor](https://occupancy.rails49.org). It runs entirely in the
 browser; there is no account and nothing is uploaded anywhere. Open a layout,
 calibrate it, label the cars, save the file.
 
@@ -67,3 +81,14 @@ Archives are stored in plain git, not LFS. They are zips, so git cannot delta
 them and every revision keeps a full copy forever. That is a deliberate trade
 against contributor friction, which is the scarcer resource while the corpus is
 small. **Revisit if this repository passes a few hundred MB.**
+
+## Licences
+
+| Path | Licence |
+| --- | --- |
+| `archives/`, `fixtures/`, `FORMAT.md` | [CC BY 4.0](LICENSE) |
+| `ts/`, `python/`, `conformance/`, `data/`, `scripts/` | [MIT](LICENSE-MIT) |
+
+The code, and the cases and data file it reads, are MIT, so that using them in
+your own project, or copying the conformance cases into your reader's tests,
+carries no further obligations. The editor and detector in `rails49/occupancy` stay AGPL-3.0.

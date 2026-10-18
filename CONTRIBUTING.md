@@ -123,6 +123,6 @@ adjusting the file; and **abandonment**, after a stated wait.
 
 By opening a pull request you license the images and labels in it under
 [CC BY 4.0](LICENSE). You keep the copyright; anyone may use the material with
-credit. Note that this covers the *data* — the rails49 code and the model
-weights trained from this corpus are AGPL-3.0, for reasons that have nothing to
-do with your photographs.
+credit. Note that this covers the *data* — the code in this repository is MIT, and the
+rails49 editor and the model weights trained from this corpus are AGPL-3.0, for
+reasons that have nothing to do with your photographs.

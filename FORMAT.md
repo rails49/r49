@@ -16,8 +16,8 @@ It holds two kinds of requirement, kept apart on purpose:
 A third kind, **reader requirements**, is not defined here at all; see
 [Reader requirements](#reader-requirements).
 
-This document and the archives are [CC BY 4.0](LICENSE). The code is
-[MIT](LICENSE-MIT).
+This document and the archives are [CC BY 4.0](LICENSE). The code, the data
+file and the conformance cases are [MIT](LICENSE-MIT).
 
 ## Versions
 
