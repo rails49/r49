@@ -1,22 +1,19 @@
-# The submission gate. Issue rails49/occupancy#57 decides what it asserts, #62 what
-# it looks like; `tools/r49-validate` in rails49/occupancy does the deciding, and
-# everything here is rendering.
+# The submission gate. FORMAT.md § Corpus rules decides what it asserts
+# (rails49/occupancy#57), rails49/occupancy#62 what it looks like;
+# `tools/r49-validate` does the deciding, and everything here is rendering.
 #
 # Two jobs, because they answer to different things:
 #
 # * `archives` judges what this pull request submitted. Pull requests only —
 #   there is no base to diff against otherwise.
 # * `guidance` judges whether CONTRIBUTING.md's generated capture table still
-#   matches the arithmetic it came from. That table is derived from
-#   `layout.min_dpt` over in rails49, so it goes stale from *outside* this
-#   repository, on a pull request that touched nothing near it. It therefore
-#   runs on every pull request, not only ones carrying a `.r49`.
+#   matches the arithmetic it came from: the recommended DPT and the scale
+#   table in packages/r49/src/data.json. It runs on every pull request, not
+#   only ones carrying a `.r49`, because a change to data.json is a pull
+#   request that need not touch CONTRIBUTING.md.
 #
-# There is no vendored copy of the validator and no published package: this
-# checks out rails49 at `main` and runs it from there (rails49#55). The cost is
-# exactly the coupling above — a change to `min_dpt` in rails49 reddens the next
-# pull request here. That is intended, and the failure message says so at
-# length, because otherwise it reads as the contributor's fault.
+# The validator is this repository's own, built on @rails49/r49 in the same
+# workspace, so nothing here checks out another repository.
 name: validate
 
 on:
@@ -49,44 +46,37 @@ jobs:
         with:
           fetch-depth: 0
 
-      - uses: actions/checkout@v7
-        with:
-          repository: rails49/occupancy
-          ref: main
-          path: rails49
-
-      # The toolchain is read out of the rails49 checkout, never restated here —
-      # `packageManager` and `.nvmrc` are the declaration rails49#55 made the
-      # corpus depend on, and rails49's own CI consumes the same two files.
+      # The toolchain is the root package.json's `packageManager` and `.nvmrc`,
+      # never restated here.
       - uses: pnpm/action-setup@v6
-        with:
-          package_json_file: rails49/package.json
 
       - uses: actions/setup-node@v7
         with:
-          node-version-file: rails49/.nvmrc
+          node-version-file: .nvmrc
           cache: pnpm
-          cache-dependency-path: rails49/pnpm-lock.yaml
 
-      # Only the validator's own subtree. A bare install would pull `ui`'s
-      # onnxruntime-web and `dataset`'s sharp — native builds this job never
-      # loads. Validating a zip costs jszip, zod and tsx.
-      - name: Install the validator
-        working-directory: rails49
-        run: pnpm install --frozen-lockfile --filter "@occupancy/r49-validate..."
+      # The validator and @rails49/r49, which it is built on.
+      - name: Build the validator
+        run: |
+          pnpm install --frozen-lockfile --filter "@rails49/r49-validate..."
+          pnpm --filter "@rails49/r49-validate..." build
 
       # NUL-delimited, and never split on whitespace. A filename with a space in
       # it is precisely what the slug rule exists to reject — so it has to reach
       # the validator intact in order to be rejected by name, rather than
       # arriving as two paths that do not exist.
+      #
+      # Only the corpus, archives/ and fixtures/, at any depth. The cases under
+      # conformance/ break format rules on purpose and are not submissions.
       - name: Find the archives this pull request changes
         id: changed
         env:
           BASE: ${{ github.event.pull_request.base.sha }}
         run: |
-          git diff --diff-filter=ACMR -z --name-only "$BASE" HEAD -- '*.r49' \
+          corpus=('archives/*.r49' 'fixtures/*.r49')
+          git diff --diff-filter=ACMR -z --name-only "$BASE" HEAD -- "${corpus[@]}" \
             > "$RUNNER_TEMP/changed.nul"
-          git diff --diff-filter=A -z --name-only "$BASE" HEAD -- '*.r49' \
+          git diff --diff-filter=A -z --name-only "$BASE" HEAD -- "${corpus[@]}" \
             | tr '\0' '\n' > "$RUNNER_TEMP/added.txt"
           # `tr -d ' '` because wc pads its count on some platforms, and the
           # step that reads this output compares it against the string "0".
@@ -119,8 +109,7 @@ jobs:
           printf 'validating %s\n' "${paths[@]}"
 
           set +e
-          rails49/tools/r49-validate/node_modules/.bin/tsx \
-            rails49/tools/r49-validate/src/cli.ts --author "$AUTHOR" -- "${paths[@]}" \
+          node tools/r49-validate/dist/cli.js --author "$AUTHOR" -- "${paths[@]}" \
             > "$RUNNER_TEMP/report.json" 2> "$RUNNER_TEMP/report.txt"
           status=$?
           set -e
@@ -155,7 +144,7 @@ jobs:
               (.warnings[] | "::warning file=\($p),title=r49-validate::\(.message | esc)")
           ' "$RUNNER_TEMP/report.json"
 
-      # The fact table rails49#57 asks for: id, DPT, residual, counts — read by
+      # The fact table rails49/occupancy#57 asks for: id, DPT, residual, counts — read by
       # a maintainer deciding whether to accept, and deliberately carrying no
       # grade. The residual is reported and never thresholded; no calibrated
       # threshold exists, and inventing one here would put a number into the
@@ -214,35 +203,26 @@ jobs:
     steps:
       - uses: actions/checkout@v7
 
-      - uses: actions/checkout@v7
-        with:
-          repository: rails49/occupancy
-          ref: main
-          path: rails49
-
       - uses: pnpm/action-setup@v6
-        with:
-          package_json_file: rails49/package.json
 
       - uses: actions/setup-node@v7
         with:
-          node-version-file: rails49/.nvmrc
+          node-version-file: .nvmrc
           cache: pnpm
-          cache-dependency-path: rails49/pnpm-lock.yaml
 
-      - name: Install the validator
-        working-directory: rails49
-        run: pnpm install --frozen-lockfile --filter "@occupancy/r49-validate..."
+      - name: Build the validator
+        run: |
+          pnpm install --frozen-lockfile --filter "@rails49/r49-validate..."
+          pnpm --filter "@rails49/r49-validate..." build
 
       # The comparison and its wording live in the validator, where `pnpm test`
       # covers them — not in this file, which nothing covers. The wording is the
-      # deliverable: the usual cause of a failure here is a change in rails49,
-      # a repository the contributor reading the message has never touched.
+      # deliverable: the usual cause of a failure here is a change to data.json,
+      # a file the contributor reading the message has never touched.
       - name: Check CONTRIBUTING.md against the arithmetic it came from
         run: |
           set +e
-          rails49/tools/r49-validate/node_modules/.bin/tsx \
-            rails49/tools/r49-validate/src/cli.ts guidance --check CONTRIBUTING.md \
+          node tools/r49-validate/dist/cli.js guidance --check CONTRIBUTING.md \
             2> "$RUNNER_TEMP/guidance.txt"
           status=$?
           set -e

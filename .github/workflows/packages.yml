@@ -1,5 +1,6 @@
 # The format's packages: build them, typecheck them, and run their tests and
-# every conformance case under conformance/cases/. The toolchain comes from
+# every conformance case under conformance/cases/; and check that the two read
+# every corpus archive alike. The toolchain comes from
 # the root package.json (packageManager) and .nvmrc, never restated here.
 name: packages
 
@@ -48,3 +49,35 @@ jobs:
       - run: uv run black --check .
       - run: uv run pyright
       - run: uv run pytest
+
+  # Every corpus archive, archives/ and fixtures/, loaded by both packages:
+  # accept or reject, the format rule on reject, and DPT and residual within
+  # 1e-9. Any difference fails. tools/r49-validate does the comparing.
+  readers:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+          cache: pnpm
+
+      - uses: astral-sh/setup-uv@v5
+
+      - run: pnpm install --frozen-lockfile --filter "@rails49/r49-validate..."
+      - run: pnpm --filter "@rails49/r49-validate..." build
+      - run: uv sync --locked
+        working-directory: packages/r49-py
+
+      - name: Compare the Python and TypeScript packages on the corpus
+        run: |
+          corpus=()
+          while IFS= read -r -d '' path; do corpus+=("$path"); done \
+            < <(find archives fixtures -name '*.r49' -print0 | sort -z)
+          uv run --project packages/r49-py --locked python tools/r49-validate/read.py \
+            "${corpus[@]}" > "$RUNNER_TEMP/python.json"
+          node tools/r49-validate/dist/cli.js readers \
+            --python "$RUNNER_TEMP/python.json" "${corpus[@]}"
