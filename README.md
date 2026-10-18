@@ -36,6 +36,10 @@ id, with its DPT and residual. [`packages/r49/`](packages/r49/) is the
 TypeScript reader and writer, `@rails49/r49`, which passes them, and
 [`packages/r49-py/`](packages/r49-py/) the read-only Python reader,
 `rails49-r49`, which passes them too.
+[`tools/r49-validate/`](tools/r49-validate/) is the corpus validator CI runs
+on every submission, built on `@rails49/r49`. `./scripts/check.sh` runs
+everything CI does: both packages' tests and conformance runners, a check that
+the two read every archive in the corpus alike, and the validator.
 
 ## The layout
 
@@ -65,8 +69,9 @@ Open a pull request adding your archive. Read
 **[CONTRIBUTING.md](CONTRIBUTING.md)** first — it is short, and the parts that
 matter most are not the obvious ones.
 
-CI checks what is mechanical: that the archive parses, that its images resolve,
-that no label is unreviewed model output, that every class is in the vocabulary.
+CI checks what is mechanical, with [FORMAT.md § Corpus rules](FORMAT.md#corpus-rules)
+as the list: that the archive parses, that its images resolve, that no label is
+unreviewed model output, that every class is in the vocabulary.
 It **cannot** check whether your boxes actually land on cars, which is the thing
 that decides whether a submission is worth having. That part is a person reading
 a sample.
