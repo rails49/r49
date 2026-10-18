@@ -51,7 +51,7 @@ export function corpusArchives(paths: readonly string[]): string[] {
  *
  * `fixtures/` sits outside `archives/` deliberately: the six are zero-label and
  * below the recommended DPT, so they satisfy neither half of what the corpus is for, and
- * a consumer's default glob of `archives/**` must not silently ingest them.
+ * an outside reader's default glob of `archives/**` must not silently ingest them.
  */
 export function scopeOf(path: string): Scope {
   const parts = segments(path);

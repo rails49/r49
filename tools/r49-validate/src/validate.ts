@@ -87,9 +87,9 @@ function checkLabels(archive: R49Archive): Finding[] {
           code: 'labels/provenance',
           message:
             `${image.filename}: label ${label.id} is still "proposed" — untouched model output. ` +
-            `Review it in the editor: accepting or adjusting a proposal records it as ` +
-            `"corrected", which is accepted here. Training on unreviewed proposals is the one ` +
-            `thing this corpus exists to prevent.`,
+            `Review it, then set its provenance to "corrected" and keep its proposed_by, which ` +
+            `is accepted here. Training on unreviewed proposals is the one thing this corpus ` +
+            `exists to prevent.`,
         });
       }
       if (!isKnownClass(label.class)) {
@@ -114,10 +114,9 @@ function qualityWarnings(archive: R49Archive, f: ReturnType<typeof facts>): Find
 
   // Deliberately *not* a warning: a missing camera height. It would fire on
   // every submission from day one, fixtures included, and a warning that always
-  // fires devalues the ones that mean something (rails49/occupancy#139). The editor is where the
-  // height is required; here it is a fact in the table. This narrower condition
-  // is the one place the fit silently means something other than the
-  // contributor intends.
+  // fires devalues the ones that mean something (rails49/occupancy#139). Here the
+  // height is a fact in the table. This narrower condition is the one place the
+  // fit silently means something other than the contributor intends.
   const offPlane = pointsOffReferencePlane(archive.getManifest());
   if (offPlane > 0) {
     warnings.push({
@@ -135,8 +134,8 @@ function qualityWarnings(archive: R49Archive, f: ReturnType<typeof facts>): Find
       code: 'calibration/unresolved',
       message:
         `Calibration does not resolve, so no DPT can be computed and no geometric claim ` +
-        `about this archive can be checked. Add two calibration points at known, differing ` +
-        `world coordinates in the editor.`,
+        `about this archive can be checked. Add two reference points at the same height, ` +
+        `apart in x or y. Without a camera height, put both at the reference height.`,
     });
   } else if (f.dpt < RECOMMENDED_DPT) {
     warnings.push({
@@ -286,8 +285,9 @@ export async function validate(
         errors.push({
           code: 'archive/id',
           message:
-            `${input.path} has no archive-level id. Open it in the editor and save — every save ` +
-            `mints one if it is missing, and never changes one that is already there.`,
+            `${input.path} has no archive-level id. Save it again with a writer that adds one, ` +
+            `or add a top-level "id" to its manifest.json: a non-empty string no other ` +
+            `archive in its directory uses, kept on every later save.`,
         });
       }
       warnings.push(...qualityWarnings(archive, f));

@@ -9,7 +9,7 @@
  *
  * Blocking errors and warnings are separate fields rather than one list with a
  * severity, because the distinction is the whole point of the soft bar and a
- * consumer must not have to filter correctly to respect it.
+ * workflow must not have to filter correctly to respect it.
  */
 
 /** Which bar an archive is held to, decided by where it sits in the corpus. */
@@ -54,9 +54,8 @@ export interface ArchiveReport {
    * Camera height above layout zero in mm, or `null` when the archive does not
    * carry one — **reported, never required**. Every archive predates the field,
    * and blocking on it would reject real data with valid pixel-space labels for
-   * a defect nothing has shown costs accuracy (rails49/occupancy#136, #139). The editor is where
-   * it is required; here it is a fact a maintainer triaging a submission wants
-   * at a glance.
+   * a defect nothing has shown costs accuracy (rails49/occupancy#136, #139). Here
+   * it is a fact a maintainer triaging a submission wants at a glance.
    */
   readonly cameraHeightMM: number | null;
   /** Railhead height in mm — the plane DPT is reported at. `null` when unauthored (reads as 0). */
@@ -82,7 +81,7 @@ export interface ArchiveReport {
 
 /** The whole run. */
 export interface Report {
-  /** Bumped when a consumer would have to change. The workflow pins it. */
+  /** Bumped when the workflow would have to change. The workflow pins it. */
   readonly version: 1;
   readonly archives: readonly ArchiveReport[];
   /** True when no archive carries a blocking error. Warnings do not clear it. */

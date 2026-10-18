@@ -88,11 +88,11 @@ below the recommended DPT, 20), `calibration/unresolved`,
 
 **A missing `camera_height_mm` is deliberately not one of them.** It would fire
 on every submission from day one, fixtures included, and a warning that always
-fires devalues the ones that mean something ([#139]). The editor is where the
-height is *required*; here it is a fact in the table, alongside the reference
-height and the obliquity the two of them imply. The narrower warning above is
-the one place the fit silently means something other than the contributor
-intends: without a height, points off the reference plane are excluded from it.
+fires devalues the ones that mean something ([#139]). Here the height is a fact
+in the table, alongside the reference height and the obliquity the two of them
+imply. The narrower warning above is the one place the fit silently means
+something other than the contributor intends: without a height, points off the
+reference plane are excluded from it.
 
 The geometry facts are **reported, never thresholded** — the `dptResidual`
 precedent. The obliquity is quantified but its cost to detection accuracy is
