@@ -1,7 +1,7 @@
 """Every case in ``conformance/cases/``, run through this package.
 
-Cases assert an outcome (accept or reject, the rule id, DPT and residual) and
-never a message: the id is the contract, the wording is not.
+Cases assert an outcome (accept or reject, the rule id, DPT, residual and
+image mismatches) and never a message: the id is the contract, the wording is not.
 ``conformance/README.md`` defines a case; this is the Python way of running one.
 """
 
@@ -28,6 +28,7 @@ class Outcome:
     rule: str | None = None
     dpt: float | None = None
     residual: float | None = None
+    image_mismatches: tuple[r49.ImageMismatch, ...] = ()
 
 
 def judge(case: Path) -> Outcome:
@@ -37,17 +38,19 @@ def judge(case: Path) -> Outcome:
     manifest = case / "manifest.json"
     inputs = [path for path in (archive, manifest) if path.exists()]
     assert len(inputs) == 1, f"{case.name} holds {len(inputs)} of archive.r49 and manifest.json"
+    mismatches: tuple[r49.ImageMismatch, ...] = ()
     try:
         if archive.exists():
-            loaded = r49.load(archive).manifest
+            loaded = r49.load(archive)
+            parsed, mismatches = loaded.manifest, tuple(loaded.image_mismatches())
         else:
             # Python parses a bare manifest on its own, so it is exempt from
             # the zip and image rules without a placeholder archive.
-            loaded = r49.parse_manifest(manifest.read_bytes())
+            parsed = r49.parse_manifest(manifest.read_bytes())
     except r49.R49Error as err:
         return Outcome("reject", rule=err.rule)
-    result = r49.fit(loaded)
-    return Outcome("accept", dpt=result.dpt, residual=result.residual)
+    result = r49.fit(parsed)
+    return Outcome("accept", dpt=result.dpt, residual=result.residual, image_mismatches=mismatches)
 
 
 def disagreements(expected: dict[str, Any], outcome: Outcome) -> list[str]:
@@ -71,6 +74,12 @@ def disagreements(expected: dict[str, Any], outcome: Outcome) -> list[str]:
             found.append(f"{key} is a number, so expected.json needs a tolerance")
         elif not math.fabs(got - want) <= expected["tolerance"]:
             found.append(f"expected {key} {want} ± {expected['tolerance']}, got {got}")
+
+    # In any order; absent, there are none.
+    want = sorted((m["rule"], m["filename"]) for m in expected.get("image_mismatches", []))
+    got = sorted((m.rule, m.filename) for m in outcome.image_mismatches)
+    if want != got:
+        found.append(f"expected image mismatches {want}, got {got}")
     return found
 
 
@@ -86,16 +95,20 @@ def test_case(case: Path) -> None:
     assert disagreements(expected_of(case), judge(case)) == []
 
 
-def test_every_format_rule_id_is_rejected_at_least_once() -> None:
-    rejected = {expected_of(c).get("rule") for c in ALL if expected_of(c)["result"] == "reject"}
-    assert [rule for rule in r49.FORMAT_RULE_IDS if rule not in rejected] == []
+REJECTED = {expected_of(c)["rule"] for c in ALL if expected_of(c)["result"] == "reject"}
+REPORTED = {m["rule"] for c in ALL for m in expected_of(c).get("image_mismatches", [])}
+IMAGE_RULES = [rule for rule in r49.FORMAT_RULES if rule.startswith("images/")]
+
+
+def test_every_format_rule_id_but_the_image_rules_is_rejected_at_least_once() -> None:
+    missing = [r for r in r49.FORMAT_RULES if r not in IMAGE_RULES and r not in REJECTED]
+    assert missing == []
+
+
+def test_each_image_rule_is_reported_at_least_once_and_never_rejected() -> None:
+    assert [rule for rule in IMAGE_RULES if rule not in REPORTED] == []
+    assert [rule for rule in IMAGE_RULES if rule in REJECTED] == []
 
 
 def test_cases_name_only_format_rule_ids() -> None:
-    known = set(r49.FORMAT_RULE_IDS)
-    unknown = [
-        c.name
-        for c in ALL
-        if expected_of(c)["result"] == "reject" and expected_of(c)["rule"] not in known
-    ]
-    assert unknown == []
+    assert (REJECTED | REPORTED) - set(r49.FORMAT_RULES) == set()

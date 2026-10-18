@@ -8,7 +8,7 @@ import zipfile
 import zlib
 from pathlib import Path
 
-from .errors import R49Error
+from .errors import ImageMismatch, R49Error
 from .manifest import Manifest, parse_manifest
 
 MANIFEST_FILE = "manifest.json"
@@ -35,36 +35,41 @@ class R49Archive:
         """The bytes of the file at ``filename``, or None when the zip has none."""
         return self._files.get(filename)
 
+    def image_mismatches(self) -> list[ImageMismatch]:
+        """Every way the manifest and the zip disagree about which images this
+        archive holds: ``images/missing`` for each image the manifest names and
+        the zip lacks, then ``images/orphan`` for each file other than
+        ``manifest.json`` that no image names, in zip order. Empty for an
+        archive that follows both rules.
+
+        Reported, not raised: :func:`load` accepts an archive with either."""
+        named = dict.fromkeys(image.filename for image in self._manifest.images)
+        missing = [
+            ImageMismatch("images/missing", name) for name in named if name not in self._files
+        ]
+        orphan = [
+            ImageMismatch("images/orphan", path)
+            for path in self._files
+            if path != MANIFEST_FILE and path not in named
+        ]
+        return missing + orphan
+
 
 def load(source: bytes | str | os.PathLike[str]) -> R49Archive:
-    """Load an archive from its bytes or from a path, applying every format rule.
+    """Load an archive from its bytes or from a path, applying every format rule
+    but the two image rules, which :meth:`R49Archive.image_mismatches` reports.
 
     :raises R49Error: naming the format rule the archive breaks.
     :raises OSError: if a path cannot be read; that is no verdict on an archive.
     """
     data = source if isinstance(source, bytes) else Path(source).read_bytes()
     if not data:
-        raise R49Error("archive/zip", "Cannot load .r49 archive: data is empty")
+        raise R49Error("archive/empty", "Cannot load .r49 archive: data is empty")
     files = _read_zip(data)
 
     if MANIFEST_FILE not in files:
-        raise R49Error("manifest/missing", "manifest.json not found in archive")
-    manifest = parse_manifest(files[MANIFEST_FILE])
-
-    # Every image the manifest names is in the zip, and every file in the zip
-    # but the manifest is an image it names.
-    named = dict.fromkeys(image.filename for image in manifest.images)
-    missing = [name for name in named if name not in files]
-    if missing:
-        raise R49Error(
-            "images/missing", f"The manifest names images the archive lacks: {', '.join(missing)}"
-        )
-    orphan = [path for path in files if path != MANIFEST_FILE and path not in named]
-    if orphan:
-        raise R49Error(
-            "images/orphan", f"The archive holds files no image names: {', '.join(orphan)}"
-        )
-    return R49Archive(manifest, files)
+        raise R49Error("archive/no-manifest", "manifest.json not found in archive")
+    return R49Archive(parse_manifest(files[MANIFEST_FILE]), files)
 
 
 def _read_zip(data: bytes) -> dict[str, bytes]:
@@ -75,5 +80,5 @@ def _read_zip(data: bytes) -> dict[str, bytes]:
             return {info.filename: zf.read(info) for info in zf.infolist() if not info.is_dir()}
     except (zipfile.BadZipFile, zlib.error, EOFError, NotImplementedError) as err:
         raise R49Error(
-            "archive/zip", f"Failed to load .r49 archive (size: {len(data)} bytes): {err}"
+            "archive/not-zip", f"Failed to load .r49 archive (size: {len(data)} bytes): {err}"
         ) from None

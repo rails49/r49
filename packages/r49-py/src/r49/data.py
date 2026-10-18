@@ -15,14 +15,11 @@ _DATA: Final[dict[str, Any]] = json.loads(
     files(__package__).joinpath("data.json").read_text(encoding="utf-8")
 )
 
-STANDARD_GAUGE: Final[float] = _DATA["standard_gauge_mm"]
+STANDARD_GAUGE: Final[float] = _DATA["standard_gauge"]
 """The prototype's standard gauge in mm."""
 
-SCALE_TO_RATIO: Final[dict[str, float]] = _DATA["scale_ratios"]
+SCALE_TO_RATIO: Final[dict[str, float]] = _DATA["scale_to_ratio"]
 """Scale name to reduction ratio (HO is 1:87)."""
 
 VOCABULARY: Final[dict[str, Any]] = _DATA["vocabulary"]
-"""The authoring taxonomy: what a label's ``class`` should match."""
-
-DETECTOR_CLASSES: Final[tuple[str, ...]] = tuple(_DATA["detector_classes"])
-"""The YOLO class list, indexed by a detector's class field."""
+"""The vocabulary: what a label's ``class`` should match."""
