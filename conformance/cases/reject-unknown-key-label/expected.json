@@ -1,0 +1,5 @@
+{
+  "description": "An unknown key in label: refused, not ignored.",
+  "result": "reject",
+  "rule": "manifest/unknown-key"
+}

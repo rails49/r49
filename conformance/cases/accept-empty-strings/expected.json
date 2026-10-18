@@ -1,0 +1,6 @@
+{
+  "description": "Free-text fields and class may be empty strings.",
+  "result": "accept",
+  "dpt": null,
+  "residual": null
+}

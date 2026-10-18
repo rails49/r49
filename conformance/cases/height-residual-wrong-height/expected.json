@@ -1,0 +1,7 @@
+{
+  "description": "The same two planes with the camera height 50% high: the residual rises to about 8 px.",
+  "result": "accept",
+  "dpt": 20.256955911715504,
+  "residual": 8.061032863849732,
+  "tolerance": 1e-09
+}

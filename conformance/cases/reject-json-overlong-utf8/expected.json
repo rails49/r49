@@ -1,0 +1,5 @@
+{
+  "description": "An overlong UTF-8 encoding of '/' (0xC0 0xAF) inside a string (rails49/occupancy#191).",
+  "result": "reject",
+  "rule": "manifest/json"
+}

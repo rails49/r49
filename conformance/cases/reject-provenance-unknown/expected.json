@@ -1,0 +1,5 @@
+{
+  "description": "A provenance that is not one of the three.",
+  "result": "reject",
+  "rule": "manifest/provenance"
+}

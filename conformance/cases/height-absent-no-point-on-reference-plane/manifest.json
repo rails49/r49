@@ -1,0 +1,41 @@
+{
+  "version": 4,
+  "layout": {
+    "scale": "HO",
+    "calibration": {
+      "points": [
+        {
+          "px": {
+            "x": 0,
+            "y": 0
+          },
+          "world": {
+            "x": 0,
+            "y": 0,
+            "z": 0
+          }
+        },
+        {
+          "px": {
+            "x": 100,
+            "y": 0
+          },
+          "world": {
+            "x": 10,
+            "y": 0,
+            "z": 0
+          }
+        }
+      ],
+      "reference_height_mm": 85
+    },
+    "sensors": []
+  },
+  "camera": {
+    "resolution": {
+      "width": 1920,
+      "height": 1080
+    }
+  },
+  "images": []
+}

@@ -1,0 +1,7 @@
+{
+  "description": "A wildly wrong point off the reference plane contributes nothing to the residual either.",
+  "result": "accept",
+  "dpt": 164.9425287356322,
+  "residual": 0.0,
+  "tolerance": 1e-09
+}

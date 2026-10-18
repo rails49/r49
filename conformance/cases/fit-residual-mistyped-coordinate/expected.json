@@ -1,0 +1,7 @@
+{
+  "description": "The third point's world x is 200 mm where the pixels say 20 mm: the residual shows it, in pixels.",
+  "result": "accept",
+  "dpt": 12.987600687845056,
+  "residual": 65.20712004019965,
+  "tolerance": 1e-09
+}

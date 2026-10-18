@@ -1,0 +1,5 @@
+{
+  "description": "Any file other than manifest.json that no image names is an orphan, image or not.",
+  "result": "reject",
+  "rule": "images/orphan"
+}

@@ -1,0 +1,7 @@
+{
+  "description": "Three coplanar points, the third 10 px off: a real residual.",
+  "result": "accept",
+  "dpt": 173.1896551724138,
+  "residual": 4.08248290463863,
+  "tolerance": 1e-09
+}

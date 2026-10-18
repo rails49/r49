@@ -1,0 +1,74 @@
+{
+  "version": 4,
+  "layout": {
+    "scale": "HO",
+    "calibration": {
+      "points": [
+        {
+          "px": {
+            "x": 0,
+            "y": 0
+          },
+          "world": {
+            "x": 0,
+            "y": 0,
+            "z": 0
+          }
+        },
+        {
+          "px": {
+            "x": 100,
+            "y": 0
+          },
+          "world": {
+            "x": 10,
+            "y": 0,
+            "z": 0
+          }
+        }
+      ],
+      "camera_height_mm": 1150,
+      "reference_height_mm": 0
+    },
+    "sensors": [
+      {
+        "id": "s1",
+        "x": 1,
+        "y": 2,
+        "name": "siding 3"
+      }
+    ],
+    "name": "Yard",
+    "description": "west end",
+    "contact": "me@example.com"
+  },
+  "camera": {
+    "resolution": {
+      "width": 1920,
+      "height": 1080
+    },
+    "model": "Pi HQ"
+  },
+  "images": [
+    {
+      "filename": "a.jpg",
+      "labeled_complete": true,
+      "labels": [
+        {
+          "id": "car-1",
+          "class": "stock",
+          "p0": {
+            "x": 10,
+            "y": 20
+          },
+          "p1": {
+            "x": 110,
+            "y": 25
+          },
+          "provenance": "human"
+        }
+      ]
+    }
+  ],
+  "id": "aBcDeFgHiJk"
+}

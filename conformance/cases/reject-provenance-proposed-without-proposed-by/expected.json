@@ -1,0 +1,5 @@
+{
+  "description": "proposed_by is required on a proposed label.",
+  "result": "reject",
+  "rule": "manifest/provenance"
+}

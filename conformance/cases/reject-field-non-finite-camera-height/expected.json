@@ -1,0 +1,5 @@
+{
+  "description": "A camera height of 1e999 (rails49/occupancy#190).",
+  "result": "reject",
+  "rule": "manifest/field"
+}

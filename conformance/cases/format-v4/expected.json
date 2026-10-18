@@ -1,0 +1,7 @@
+{
+  "description": "The frozen v4 archive: written once by R49Archive.export() in rails49/occupancy and never regenerated. Three points at z 0 and one above, which is off the reference plane; the third is 10 px off a perfect fit.",
+  "result": "accept",
+  "dpt": 16.58850574712644,
+  "residual": 5.3452248382484875,
+  "tolerance": 1e-9
+}

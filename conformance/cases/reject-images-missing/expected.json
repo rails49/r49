@@ -1,0 +1,5 @@
+{
+  "description": "The manifest names an image the zip does not hold.",
+  "result": "reject",
+  "rule": "images/missing"
+}

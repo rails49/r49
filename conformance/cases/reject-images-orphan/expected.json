@@ -1,0 +1,5 @@
+{
+  "description": "The zip holds a file no image names.",
+  "result": "reject",
+  "rule": "images/orphan"
+}

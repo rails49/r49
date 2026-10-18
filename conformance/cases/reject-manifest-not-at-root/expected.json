@@ -1,0 +1,5 @@
+{
+  "description": "manifest.json in a folder, not at the zip's root.",
+  "result": "reject",
+  "rule": "manifest/missing"
+}

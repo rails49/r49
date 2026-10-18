@@ -1,0 +1,6 @@
+{
+  "description": "Uncalibrated: no points, so DPT and the residual do not resolve.",
+  "result": "accept",
+  "dpt": null,
+  "residual": null
+}

@@ -1,0 +1,6 @@
+{
+  "description": "No camera height and no point on the reference plane: DPT does not resolve.",
+  "result": "accept",
+  "dpt": null,
+  "residual": null
+}

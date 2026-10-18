@@ -1,0 +1,5 @@
+{
+  "description": "A manifest's JSON, not zipped.",
+  "result": "reject",
+  "rule": "archive/zip"
+}

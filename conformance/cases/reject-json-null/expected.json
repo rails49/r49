@@ -1,0 +1,5 @@
+{
+  "description": "manifest.json holds null.",
+  "result": "reject",
+  "rule": "manifest/json"
+}

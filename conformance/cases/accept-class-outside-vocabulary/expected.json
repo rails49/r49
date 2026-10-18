@@ -1,0 +1,6 @@
+{
+  "description": "Any string is a valid class in the format; the vocabulary is a corpus rule.",
+  "result": "accept",
+  "dpt": null,
+  "residual": null
+}

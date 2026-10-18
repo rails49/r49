@@ -1,0 +1,7 @@
+{
+  "description": "A camera height changes nothing when every point and the reference plane are at layout zero.",
+  "result": "accept",
+  "dpt": 164.9425287356322,
+  "residual": null,
+  "tolerance": 1e-09
+}

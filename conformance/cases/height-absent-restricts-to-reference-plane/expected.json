@@ -1,0 +1,7 @@
+{
+  "description": "No camera height: only the z 0 plane, the reference plane, counts.",
+  "result": "accept",
+  "dpt": 164.9425287356322,
+  "residual": null,
+  "tolerance": 1e-09
+}

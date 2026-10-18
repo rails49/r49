@@ -1,0 +1,7 @@
+{
+  "description": "A pair at z 1200 above a 1150 mm camera is left out; only the z 0 pair counts.",
+  "result": "accept",
+  "dpt": 164.9425287356322,
+  "residual": null,
+  "tolerance": 1e-09
+}

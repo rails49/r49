@@ -1,0 +1,17 @@
+{
+  "version": 4,
+  "layout": {
+    "scale": "N"
+  },
+  "camera": {
+    "resolution": {
+      "width": 640,
+      "height": 480
+    }
+  },
+  "images": [
+    {
+      "filename": "a.jpg"
+    }
+  ]
+}

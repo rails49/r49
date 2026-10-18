@@ -1,0 +1,5 @@
+{
+  "description": "proposed_by may not be empty.",
+  "result": "reject",
+  "rule": "manifest/provenance"
+}

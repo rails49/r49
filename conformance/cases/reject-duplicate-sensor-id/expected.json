@@ -1,0 +1,5 @@
+{
+  "description": "Two sensors share an id.",
+  "result": "reject",
+  "rule": "manifest/duplicate-id"
+}

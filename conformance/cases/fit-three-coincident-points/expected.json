@@ -1,0 +1,6 @@
+{
+  "description": "Three pairs, every one 0 mm apart: neither DPT nor the residual resolves.",
+  "result": "accept",
+  "dpt": null,
+  "residual": null
+}

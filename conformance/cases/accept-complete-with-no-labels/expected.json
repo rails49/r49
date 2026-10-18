@@ -1,0 +1,6 @@
+{
+  "description": "An image labeled complete with no labels is an all-background sample.",
+  "result": "accept",
+  "dpt": null,
+  "residual": null
+}

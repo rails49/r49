@@ -1,0 +1,5 @@
+{
+  "description": "A valid archive cut short.",
+  "result": "reject",
+  "rule": "archive/zip"
+}

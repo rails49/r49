@@ -1,0 +1,7 @@
+{
+  "description": "Pairs at z 0 and z 85 imaged by a 1150 mm camera combine into one exact fit.",
+  "result": "accept",
+  "dpt": 164.9425287356322,
+  "residual": 0.0,
+  "tolerance": 1e-09
+}

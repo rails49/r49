@@ -1,0 +1,7 @@
+{
+  "description": "The residual is in pixels and does not depend on the scale (compare fit-residual-scale-g).",
+  "result": "accept",
+  "dpt": 57.65625,
+  "residual": 26.72612419124244,
+  "tolerance": 1e-09
+}
