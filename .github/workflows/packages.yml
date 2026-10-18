@@ -1,0 +1,32 @@
+# The format's packages: build them, typecheck them, and run their tests and
+# every conformance case under conformance/cases/. The toolchain comes from
+# the root package.json (packageManager) and .nvmrc, never restated here.
+name: packages
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  packages:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+          cache: pnpm
+
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm build
+      - run: pnpm typecheck
+      # @rails49/r49's TypeScript tests and the conformance cases, which its
+      # runner walks.
+      - run: pnpm test

@@ -30,6 +30,11 @@ You make one with the [editor](https://occupancy.rails49.org). It runs entirely 
 browser; there is no account and nothing is uploaded anywhere. Open a layout,
 calibrate it, label the cars, save the file.
 
+[`conformance/`](conformance/) holds cases any reader can run to show it agrees
+with FORMAT.md: inputs, and whether each is accepted or refused under which rule
+id, with its DPT and residual. [`packages/r49/`](packages/r49/) is the
+TypeScript reader and writer, `@rails49/r49`, which passes them.
+
 ## The layout
 
 ```
@@ -82,13 +87,13 @@ Two licences, by path:
 | Path | Licence |
 | :--- | :--- |
 | `archives/`, `fixtures/` — the archives | [CC BY 4.0](LICENSE) |
-| `FORMAT.md` | [CC BY 4.0](LICENSE) |
+| `FORMAT.md`, and `conformance/` — the cases that test it | [CC BY 4.0](LICENSE) |
 | `CONTEXT.md`, `README.md`, `CONTRIBUTING.md`, `docs/` — the prose around the format | [CC BY 4.0](LICENSE) |
 | `tools/`, including the corpus validator in `tools/r49-validate/` | [MIT](LICENSE-MIT) |
-| `scripts/`, `.github/` | [MIT](LICENSE-MIT) |
+| `packages/`, including `@rails49/r49` and its conformance runner | [MIT](LICENSE-MIT) |
+| `scripts/`, `.github/`, and the workspace files at the root: `package.json`, `pnpm-workspace.yaml`, `pnpm-lock.yaml`, `.nvmrc` | [MIT](LICENSE-MIT) |
 
-Any code added outside these paths, such as the format's packages and their
-conformance runners, is MIT and is added to this table with it. Code that moves
+Any code added outside these paths is MIT and is added to this table with it. Code that moves
 here from [rails49/occupancy](https://github.com/rails49/occupancy), which stays
 AGPL-3.0, is MIT once it is here; it has one author, so relicensing it needs no
 other consent. Using the code here brings no AGPL obligations.
