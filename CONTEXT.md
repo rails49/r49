@@ -73,18 +73,18 @@ How far the reference points disagree with the fitted scale, in image pixels. Se
 ### Labels
 
 **Car**:
-One piece of rolling stock, labeled by its span. See [FORMAT § Car label](FORMAT.md#car-label).
+One locomotive, coach or wagon on the layout. See [FORMAT § Car label](FORMAT.md#car-label).
 _Avoid_: vehicle, object, stock (for the thing itself)
 
 **Span**:
 The two end points of a car label. See [FORMAT § Car label](FORMAT.md#car-label).
 
 **Train**:
-Cars whose ends coincide. Derived from the labels, never stored. See [FORMAT § Car label](FORMAT.md#car-label).
+Cars whose ends coincide. See [FORMAT § Car label](FORMAT.md#car-label).
 _Avoid_: consist
 
 **Coupling**:
-The end point two cars in a train share. Derived, never labeled. See [FORMAT § Car label](FORMAT.md#car-label).
+The end point two cars in a train share. See [FORMAT § Car label](FORMAT.md#car-label).
 
 **Class**:
 A dotted name for what a car is, such as `stock.loco.steam`. See [FORMAT § The vocabulary](FORMAT.md#the-vocabulary).
