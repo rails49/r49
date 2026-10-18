@@ -3,7 +3,7 @@ import { R49Archive, getDPT, getDPTResidual } from '../src/index.ts';
 import type { ManifestData } from '../src/index.ts';
 
 /**
- * The camera-height correction (#135) and the format decisions around it (#139).
+ * The camera-height correction (rails49/occupancy#135) and the format decisions around it (rails49/occupancy#139).
  *
  * Kept out of `archive.test.ts` because it is one coherent behaviour with its
  * own arithmetic, not another pass over the archive seam — but it drives the
@@ -60,7 +60,7 @@ describe('the schema accepts the two heights', () => {
   });
 
   /**
-   * The #139 decision, as a regression test.
+   * The rails49/occupancy#139 decision, as a regression test.
    *
    * Neither field may take a zod `.default()`: a default is populated by the
    * parser, so merely opening and re-saving someone else's archive would write
@@ -179,7 +179,7 @@ describe('the residual validates the camera height', () => {
 
 describe('the unknown-key refusal is worded for the person who meets it', () => {
   /**
-   * The additive fields add no version (#139), so an unknown key — not a
+   * The additive fields add no version (rails49/occupancy#139), so an unknown key — not a
    * version mismatch — is how a stale reader meets a newer archive. zod's own
    * `Unrecognized key(s) in object` is legible to someone holding the schema
    * and useless to a model railroader looking at a file that will not open.

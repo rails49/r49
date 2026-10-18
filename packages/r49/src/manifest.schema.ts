@@ -1,21 +1,10 @@
 import { z } from 'zod';
-import {
-  STANDARD_GAUGE,
-  SCALE_TO_RATIO,
-  SCALES,
-  type Scale,
-} from '@occupancy/config';
+import { STANDARD_GAUGE, SCALE_TO_RATIO, SCALES, type Scale } from './data.ts';
 
-/**
- * Every valid scale name, in the order `config.yaml` defines them.
- *
- * Sourced from `@occupancy/config`; this package declares no scale table of its
- * own. `config.yaml` is the single authored home, and a staleness check in
- * `bin/test.sh` keeps the generated binding honest.
- */
+/** Every valid scale name, in the order `data.json` defines them. */
 export const VALID_SCALES: readonly Scale[] = SCALES;
 
-/** A scale name. Alias of `@occupancy/config`'s `Scale`. */
+/** A scale name. */
 export type ValidScales = Scale;
 
 /** Model-domain track gauge in mm (prototype gauge / scale ratio). Internal — the prototype domain is not part of the package's public contract. */
@@ -40,13 +29,13 @@ function getGaugeMM(scale: Scale): number {
  * images `z/(h−z)` too large — 9.3% at track height under a 1 m camera. That
  * bias lands in DPT and so in car width, the drift tolerance, the `min_dpt`
  * gate and the resample factor. `h` removes it in closed form; focal length
- * cannot, because it cancels from the ratio. See `SPEC.md` § Camera height.
+ * cannot, because it cancels from the ratio. See FORMAT.md § The calibration fit.
  *
  * **A pair still needs one height.** Both points of a pair must share `z`, and
  * that is not a simplification: two points at different heights sit at
  * different depths *and* different azimuths, so their pixel separation is not
  * any scale times any distance — recovering it would need the position model
- * deliberately not built (#135). What the camera height changes is that pairs
+ * deliberately not built (rails49/occupancy#135). What the camera height changes is that pairs
  * at *different* heights now combine correctly into one fit, each normalized to
  * layout zero, where before they either blended silently (a latent ~9% error)
  * or one plane's worth was all you could use.
@@ -235,7 +224,7 @@ const CalibrationPointSchema = z
 // every consumer null-checking the parent.
 //
 // The two heights below are `.optional()` and deliberately **not** `.default()`
-// (#139). A default is populated by the parser, so the first save of any
+// (rails49/occupancy#139). A default is populated by the parser, so the first save of any
 // archive — including one merely opened to look at — would write the key into
 // someone else's file. That is damage done at save time and invisible
 // afterwards, which is the failure the strictness note above exists to prevent.
@@ -282,7 +271,7 @@ const carLabelBase = {
    * A plain string here, deliberately unvalidated against the vocabulary.
    * Conformance is a warning in the editor and a fatal error in the training
    * exporter; a format that refused to open files because someone pruned
-   * `config.yaml` would punish config edits.
+   * the vocabulary would punish vocabulary edits.
    */
   class: z.string(),
   p0: PointSchema,
@@ -351,8 +340,8 @@ const LayoutSchema = z
      * Required, with **no default**. v3 defaulted this to `'N'`, which is not
      * safe here: `DPT = s · gauge_mm(scale)`, so a silently-assumed scale
      * reports a DPT wrong by the ratio between the two scales — up to 8.8×
-     * between Z and G. SPEC § The v4 manifest names only two defaults,
-     * `points: []` and `labeled_complete: false`, and this is not one of them.
+     * between Z and G. FORMAT.md § Strictness allows only the defaults it
+     * marks *reads as*, and this is not one of them.
      */
     scale: ScaleSchema,
     calibration: CalibrationSchema,
@@ -413,7 +402,7 @@ export const ManifestDataSchema = z
  * file that will not open.
  *
  * It is worth rewording because the additive fields decided on
- * [#139](https://github.com/rails49/occupancy/issues/139) add **no version** — so
+ * [rails49/occupancy#139](https://github.com/rails49/occupancy/issues/139) add **no version** — so
  * this, and not a version mismatch, is how a stale reader meets a newer
  * archive. A cached bundle is the ordinary way to be behind in a client-side
  * app served from one origin, and "reload the app" is the one thing the reader

@@ -1,4 +1,4 @@
-// Public interface of @occupancy/r49.
+// Public interface of @rails49/r49.
 //
 // This file is the package's interface — the only surface consumers may rely
 // on. Anything not exported here is internal and may change without notice.
@@ -51,7 +51,7 @@ export {
 } from './manifest.schema.ts';
 
 //── Class vocabulary ─────────────────────────────────────────────────────────
-// How the authored taxonomy in `config.yaml` is read. Here rather than in a
+// How the authored taxonomy in `data.json` is read. Here rather than in a
 // consumer because two of them must agree: the editor warns on a
 // non-conforming class, and the corpus validator blocks on it. Not parse-time
 // validation — `class` stays a plain string at the format layer.
@@ -75,9 +75,8 @@ export {
 // gauge in mm — only the pixel-domain getDPT() and the scale names in
 // VALID_SCALES. Exposing the prototype domain would invite gauge arithmetic to
 // be reimplemented downstream (which is exactly what lib/classifier used to
-// do). The first two are no longer ours to re-export in any case: they are
-// generated into @occupancy/config from config.yaml, which is where anything
-// that genuinely needs them should read them.
+// do). FORMAT.md § Scales and gauge states the table for anyone who genuinely
+// needs it.
 //
 // Withheld: assertManifestVersion. It is the version guard R49Archive applies
 // before parsing, not a public predicate — callers that want to know whether

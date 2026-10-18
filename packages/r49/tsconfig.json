@@ -1,9 +1,14 @@
 {
-  "extends": "../../tsconfig.base.json",
   "compilerOptions": {
-    "module": "esnext",
-    "moduleResolution": "bundler",
-    "allowImportingTsExtensions": true,
+    "target": "ES2022",
+    "module": "NodeNext",
+    "moduleResolution": "NodeNext",
+    "strict": true,
+    "esModuleInterop": true,
+    "skipLibCheck": true,
+    "forceConsistentCasingInFileNames": true,
+    "resolveJsonModule": true,
+    "rewriteRelativeImportExtensions": true,
     "noEmit": true
   },
   "include": ["src/**/*.ts", "tests/**/*.ts"]

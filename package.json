@@ -1,0 +1,11 @@
+{
+  "name": "r49",
+  "private": true,
+  "license": "MIT",
+  "packageManager": "pnpm@9.15.9",
+  "scripts": {
+    "build": "pnpm -r build",
+    "typecheck": "pnpm -r typecheck",
+    "test": "pnpm -r test"
+  }
+}
