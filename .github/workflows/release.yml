@@ -1,0 +1,79 @@
+# A tag publishes both packages at the tag's version: `v0.2.0` publishes
+# @rails49/r49@0.2.0 to npm and rails49-r49==0.2.0 to PyPI. Package versions are
+# semver and separate from the format version (FORMAT.md § Versions).
+#
+# No stored secret: both registries accept GitHub's OIDC token through trusted
+# publishing. Before the first tag, a maintainer must, once and by hand:
+#
+# * create the `rails49` organisation on npm, and on the @rails49/r49 package
+#   add a trusted publisher for rails49/r49, workflow `release.yml`;
+# * on PyPI, add a pending trusted publisher for project `rails49-r49`,
+#   repository rails49/r49, workflow `release.yml`, environment `pypi`;
+# * create the `pypi` and `npm` environments in this repository's settings.
+name: release
+
+on:
+  push:
+    tags: ['v*.*.*']
+
+permissions:
+  contents: read
+
+jobs:
+  version:
+    name: tag matches both packages
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - name: Compare
+        run: |
+          tag="${GITHUB_REF_NAME#v}"
+          npm=$(node -p "require('./ts/package.json').version")
+          pypi=$(python3 -c "import tomllib; print(tomllib.load(open('python/pyproject.toml','rb'))['project']['version'])")
+          echo "tag $tag, npm $npm, pypi $pypi"
+          [ "$tag" = "$npm" ] && [ "$tag" = "$pypi" ] || {
+            echo "::error::The tag, ts/package.json and python/pyproject.toml must carry one version." >&2
+            exit 1
+          }
+
+  verify:
+    needs: version
+    uses: ./.github/workflows/packages.yml
+
+  npm:
+    name: publish to npm
+    needs: verify
+    runs-on: ubuntu-latest
+    environment: npm
+    permissions:
+      contents: read
+      id-token: write
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: npm-dist
+          path: dist
+      # Node 24 ships npm 11, which publishes through trusted publishing with no
+      # token and attaches provenance on its own.
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 24
+          registry-url: https://registry.npmjs.org
+      - run: npm publish dist/*.tgz --access public
+
+  pypi:
+    name: publish to PyPI
+    needs: verify
+    runs-on: ubuntu-latest
+    environment: pypi
+    permissions:
+      contents: read
+      id-token: write
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: python-dist
+          path: dist
+      - uses: pypa/gh-action-pypi-publish@release/v1
+        with:
+          packages-dir: dist
