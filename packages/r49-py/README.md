@@ -42,8 +42,9 @@ r49.is_known_class("stock.loco.steam")    # True
 A refusal is an `r49.R49Error` whose `rule` is the format rule id broken, such
 as `manifest/unknown-key`. The id is the contract; the message is not. An
 archive whose images and manifest disagree still loads; `image_mismatches()`
-lists each disagreement under `images/missing` or `images/orphan`. `r49.parse_manifest` reads a bare `manifest.json`, which is
-exempt from the zip and image rules.
+lists each disagreement under `images/missing` or `images/orphan`.
+`r49.parse_manifest` reads a bare `manifest.json`, which is exempt from the zip
+and image rules.
 
 A car label's `class` is `class_` in Python; the manifest key stays `class`.
 

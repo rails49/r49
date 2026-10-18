@@ -214,8 +214,9 @@ def parse_manifest(data: bytes) -> Manifest:
     """Parse ``manifest.json`` bytes: UTF-8, then JSON, then the version, then
     everything else, each refusal under its own rule id.
 
-    A bare manifest is exempt from the zip and image rules; :func:`r49.load`
-    applies those.
+    A bare manifest is exempt from the zip and image rules. :func:`r49.load`
+    applies the zip rules, and :meth:`r49.R49Archive.image_mismatches` reports
+    the image rules.
 
     :raises R49Error: ``manifest/not-json``, ``manifest/version``,
         ``manifest/unknown-key``, ``manifest/provenance``,
