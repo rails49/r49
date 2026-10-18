@@ -3,6 +3,11 @@
   "version": "0.1.0",
   "description": "Read and write .r49 layout archives",
   "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/rails49/r49.git",
+    "directory": "packages/r49"
+  },
   "type": "module",
   "exports": {
     ".": {
@@ -14,8 +19,12 @@
   "files": [
     "dist"
   ],
+  "publishConfig": {
+    "access": "public"
+  },
   "scripts": {
     "build": "tsc -p tsconfig.build.json",
+    "prepack": "cp ../../LICENSE-MIT LICENSE",
     "test": "node --import ../../scripts/test/register.mjs --test 'tests/**/*.test.ts'",
     "typecheck": "tsc --noEmit"
   },

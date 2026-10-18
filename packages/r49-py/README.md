@@ -2,21 +2,24 @@
 
 Reads `.r49` railroad layout archives in Python: a zip holding a `manifest.json`
 plus the layout photographs it describes. The format is defined in
-[FORMAT.md](../../FORMAT.md); this package is a reader of it, and agrees with
-the TypeScript package [`@rails49/r49`](../r49/) on every
-[conformance case](../../conformance/).
+[FORMAT.md](https://github.com/rails49/r49/blob/main/FORMAT.md); this package is a
+reader of it, and agrees with the TypeScript package
+[`@rails49/r49`](https://github.com/rails49/r49/tree/main/packages/r49) on every
+[conformance case](https://github.com/rails49/r49/tree/main/conformance).
 
 Read-only: it loads, validates and fits archives, and never writes one.
 
 ## Interface
 
-See [`src/r49/__init__.py`](src/r49/__init__.py), the package's public surface.
+See
+[`src/r49/__init__.py`](https://github.com/rails49/r49/blob/main/packages/r49-py/src/r49/__init__.py),
+the package's public surface.
 Anything not exported there is internal and may change without notice.
 
 The scale table and the vocabulary are read from the TypeScript package's
-[`data.json`](../r49/src/data.json), linked into the package as
-`src/r49/data.json`; no value of them is declared in code. The sdist holds a
-copy of the file in place of the link.
+[`data.json`](https://github.com/rails49/r49/blob/main/packages/r49/src/data.json),
+linked into the package as `src/r49/data.json`; no value of them is declared
+in code. The sdist holds a copy of the file in place of the link.
 
 ## Example
 
@@ -61,8 +64,8 @@ uv run pyright
 uv build                 # the sdist, then the wheel from it
 ```
 
-Nothing is published yet.
+Installed with `pip install rails49-r49`.
 
 ## Licence
 
-[MIT](../../LICENSE-MIT).
+[MIT](https://github.com/rails49/r49/blob/main/LICENSE-MIT).

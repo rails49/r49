@@ -1,7 +1,7 @@
 import { describe, it } from 'node:test';
 import { expect } from '../../../scripts/test/expect.ts';
 import { fileURLToPath } from 'node:url';
-import { FORMAT_RULES, R49Archive, getDPT, getDPTResidual } from '../src/index.ts';
+import { FORMAT_RULES, R49Archive, getDPT, getDPTResidual } from './r49.ts';
 import type { ManifestData } from '../src/index.ts';
 import { disagreements, judge, judgeArchive, readCases } from './conformance.ts';
 
@@ -53,7 +53,7 @@ describe('archives the writer produces pass as cases', () => {
     world: { x: world[0], y: world[1], z: world[2] },
   });
 
-  const written: Array<[string, () => Promise<R49Archive>]> = [
+  const written: Array<[string, () => Promise<InstanceType<typeof R49Archive>>]> = [
     ['an empty archive', async () => {
       const archive = new R49Archive();
       archive.setManifest({
