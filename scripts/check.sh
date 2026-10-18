@@ -10,7 +10,9 @@ if [ "${CI:-}" = true ]; then
   (cd "$occupancy" && COREPACK_ENABLE_DOWNLOAD_PROMPT=0 corepack pnpm install \
     --frozen-lockfile --filter "@occupancy/r49-validate...")
 else
-  occupancy=${OCCUPANCY:-../occupancy}
+  # beside the main checkout, so a linked worktree finds it too
+  main=$(dirname "$(git rev-parse --path-format=absolute --git-common-dir)")
+  occupancy=${OCCUPANCY:-$main/../occupancy}
 fi
 
 v=$(cd "$occupancy/tools/r49-validate" && pwd)
