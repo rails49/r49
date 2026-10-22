@@ -1,17 +1,17 @@
 # Domain Docs
 
-How the engineering skills should consume this repo's domain documentation when exploring the codebase. This is a single-context repo. For what each kind of doc holds, see the org's [ADR-0017](https://github.com/rails49/.github/blob/main/docs/adr/0017-each-fact-has-one-owner-and-an-accepted-adr-does-not-change.md).
+How the engineering skills should consume this repo's domain documentation when exploring the codebase. This is a single-context repo. For what each kind of doc holds, see the org's [ADR-0021](https://github.com/rails49/.github/blob/main/docs/adr/0021-each-fact-has-one-owner-and-the-glossary-is-glossary-md.md).
 
 ## Before exploring, read these
 
-- `CONTEXT.md` at the repo root: the glossary.
+- `GLOSSARY.md` at the repo root: the glossary.
 - `docs/adr/`: read ADRs that touch the area you're about to work in.
 
 If either doesn't exist, proceed without comment. Don't flag the absence and don't suggest creating them upfront. The `/domain-modeling` skill creates them when terms or decisions get resolved.
 
 ## Use the glossary's vocabulary
 
-When your output names a domain concept (in an issue title, a refactor proposal, a hypothesis, a test name), use the term as defined in `CONTEXT.md`. Don't drift to synonyms the glossary rejects.
+When your output names a domain concept (in an issue title, a refactor proposal, a hypothesis, a test name), use the term as defined in `GLOSSARY.md`. Don't drift to synonyms the glossary rejects.
 
 If the concept you need isn't in the glossary yet, either you're inventing language the project doesn't use (reconsider) or there's a real gap (note it for `/domain-modeling`).
 

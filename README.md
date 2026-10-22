@@ -23,7 +23,7 @@ span along its centerline carrying a record of who authored it.
 **[FORMAT.md](FORMAT.md) defines the format in full**: every manifest field, the
 calibration fit, the rule ids, and which rules are the format's and which are
 this corpus's. It is all you need to write your own reader. The terms it uses
-are in [CONTEXT.md](CONTEXT.md), and the decisions behind it in
+are in [GLOSSARY.md](GLOSSARY.md), and the decisions behind it in
 [docs/adr/](docs/adr/).
 
 You make one with the [editor](https://occupancy.rails49.org). It runs entirely in the
@@ -96,7 +96,7 @@ Two licences, by path:
 | :--- | :--- |
 | `archives/`, `fixtures/` — the archives | [CC BY 4.0](LICENSE) |
 | `FORMAT.md`, and `conformance/` — the cases that test it | [CC BY 4.0](LICENSE) |
-| `CONTEXT.md`, `README.md`, `CONTRIBUTING.md`, `docs/` — the prose around the format | [CC BY 4.0](LICENSE) |
+| `GLOSSARY.md`, `README.md`, `CONTRIBUTING.md`, `docs/` — the prose around the format | [CC BY 4.0](LICENSE) |
 | `tools/`, including the corpus validator in `tools/r49-validate/` | [MIT](LICENSE-MIT) |
 | `packages/`, including `@rails49/r49`, `rails49-r49` and their conformance runners | [MIT](LICENSE-MIT) |
 | `scripts/`, `.github/`, and the workspace files at the root: `package.json`, `pnpm-workspace.yaml`, `pnpm-lock.yaml`, `.nvmrc` | [MIT](LICENSE-MIT) |
