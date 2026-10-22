@@ -19,7 +19,7 @@ The rules every archive follows, independent of any program that reads or writes
 _Avoid_: schema (for the rules themselves)
 
 **Outside reader**:
-A program that reads archives and is not part of this project, such as someone else's model trained on the corpus. See [ADR 0018](docs/adr/0018-the-r49-format-is-defined-in-rails49-r49.md).
+A program that reads archives and is not part of this project, such as someone else's model trained on the corpus. See [org ADR-0022](https://github.com/rails49/.github/blob/main/docs/adr/0022-the-r49-format-is-r49s-and-each-consumer-pins-it.md).
 _Avoid_: consumer, classifier
 
 **Corpus**:
