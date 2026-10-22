@@ -2,7 +2,7 @@
 
 This document defines the `.r49` layout archive, so that you can read one in any
 language without reading any program that writes them. The vocabulary it uses is
-in [CONTEXT.md](CONTEXT.md).
+in [GLOSSARY.md](GLOSSARY.md).
 
 It holds two kinds of rule, kept apart on purpose:
 
