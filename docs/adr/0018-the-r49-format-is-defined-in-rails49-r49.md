@@ -1,5 +1,7 @@
 # The .r49 format is defined in rails49/r49
 
+*Superseded by [org ADR-0022](https://github.com/rails49/.github/blob/main/docs/adr/0022-the-r49-format-is-r49s-and-each-consumer-pins-it.md).*
+
 Status: accepted, not yet built. Replaces the decision in [#55](https://github.com/rails49/occupancy/issues/55).
 
 Copied from rails49/occupancy, where it stays as ADR 0018. Written there, so "this repository" means occupancy and the ADR numbers it cites are occupancy's, except ADR 0008, which is now [here](0008-v4-only-and-optional-fields-add-no-version.md).
