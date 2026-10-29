@@ -16,9 +16,7 @@
 export type Scope =
   /** `archives/<handle>/<slug>.r49` — a contributor submission. Full bar. */
   | 'archives'
-  /** `fixtures/<slug>.r49` — the six. Structure only, and no warnings. */
-  | 'fixtures'
-  /** Neither. A `.r49` somewhere the corpus layout does not define. */
+  /** Not that. A `.r49` somewhere the corpus layout does not define. */
   | 'unknown';
 
 /** One thing found, blocking or not. */

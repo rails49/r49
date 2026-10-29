@@ -113,7 +113,7 @@ function qualityWarnings(archive: R49Archive, f: ReturnType<typeof facts>): Find
   const warnings: Finding[] = [];
 
   // Deliberately *not* a warning: a missing camera height. It would fire on
-  // every submission from day one, fixtures included, and a warning that always
+  // every submission from day one, and a warning that always
   // fires devalues the ones that mean something (rails49/occupancy#139). Here the
   // height is a fact in the table. This narrower condition is the one place the
   // fit silently means something other than the contributor intends.
@@ -236,14 +236,7 @@ async function idCollisions(
   return byPath;
 }
 
-/**
- * Validate a set of submitted archives.
- *
- * `fixtures/` is held to a thinner bar — the format rules, `path/shape` and
- * `path/slug` — and gets **no warnings at all**. The six are known to be
- * zero-label and below the recommended DPT by design, so annotating that on
- * every pull request would be pure noise, and they carry no ids to check.
- */
+/** Validate a set of submitted archives. */
 export async function validate(
   submitted: readonly ArchiveInput[],
   options: ValidateOptions = {}
@@ -276,22 +269,21 @@ export async function validate(
     }
 
     const f = facts(archive);
-    const errors: Finding[] = [...checkPath(input.path, author), ...checkImages(archive)];
-    const warnings: Finding[] = [];
-
-    if (scope !== 'fixtures') {
-      errors.push(...checkLabels(archive));
-      if (f.id === null) {
-        errors.push({
-          code: 'archive/id',
-          message:
-            `${input.path} has no archive-level id. Save it again with a writer that adds one, ` +
-            `or add a top-level "id" to its manifest.json: a non-empty string no other ` +
-            `archive in its directory uses, kept on every later save.`,
-        });
-      }
-      warnings.push(...qualityWarnings(archive, f));
+    const errors: Finding[] = [
+      ...checkPath(input.path, author),
+      ...checkImages(archive),
+      ...checkLabels(archive),
+    ];
+    if (f.id === null) {
+      errors.push({
+        code: 'archive/id',
+        message:
+          `${input.path} has no archive-level id. Save it again with a writer that adds one, ` +
+          `or add a top-level "id" to its manifest.json: a non-empty string no other ` +
+          `archive in its directory uses, kept on every later save.`,
+      });
     }
+    const warnings = qualityWarnings(archive, f);
 
     loaded.push({ input, id: f.id });
     reports.set(input.path, { path: input.path, scope, ...f, errors, warnings });

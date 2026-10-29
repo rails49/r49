@@ -29,10 +29,10 @@ function segments(path: string): string[] {
 }
 
 /** The directories that hold the corpus. */
-export const CORPUS_DIRECTORIES = ['archives', 'fixtures'] as const;
+export const CORPUS_DIRECTORIES = ['archives'] as const;
 
 /**
- * Whether a path is in the corpus, under `archives/` or `fixtures/`, and so
+ * Whether a path is in the corpus, under `archives/`, and so
  * something the validator checks. Anywhere else is not a submission:
  * `conformance/` holds archives that break format rules on purpose.
  */
@@ -46,17 +46,10 @@ export function corpusArchives(paths: readonly string[]): string[] {
   return paths.filter(p => inCorpus(p) && p.endsWith('.r49')).sort();
 }
 
-/**
- * Which bar this path is held to.
- *
- * `fixtures/` sits outside `archives/` deliberately: the six are zero-label and
- * below the recommended DPT, so they satisfy neither half of what the corpus is for, and
- * an outside reader's default glob of `archives/**` must not silently ingest them.
- */
+/** Which bar this path is held to. */
 export function scopeOf(path: string): Scope {
   const parts = segments(path);
   if (parts[0] === 'archives' && parts.length === 3) return 'archives';
-  if (parts[0] === 'fixtures' && parts.length === 2) return 'fixtures';
   return 'unknown';
 }
 
@@ -86,8 +79,7 @@ export function checkPath(path: string, author: string | null): Finding[] {
       code: 'path/shape',
       message:
         `${path} is not a place the corpus defines. A submission goes in ` +
-        `archives/<your-github-handle>/<slug>.r49; fixtures/<slug>.r49 is reserved for the ` +
-        `six archives that came from rails49/occupancy.`,
+        `archives/<your-github-handle>/<slug>.r49.`,
     });
     return findings;
   }
