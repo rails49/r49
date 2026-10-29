@@ -150,17 +150,21 @@ The order of `images` is part of the archive, and a writer keeps it.
 | `proposed_by` | non-empty string | The proposing model's version, in any form. Required when `provenance` is `proposed` or `corrected`; forbidden when it is `human`. |
 
 A span covers what the camera sees of the car, whatever hides the rest: a
-tunnel portal, a bridge, a building, a tree, the edge of the frame. A span over
-the hidden part would ask a model to predict pixels it cannot see. A car seen
-in two pieces, for example under a road bridge, is two labels, one per visible
-piece. A car the camera cannot see at all has no label.
+tunnel portal, a bridge, a building, a tree, another car, the edge of the
+frame. A span over the hidden part would ask a model to predict pixels it
+cannot see. A car seen in two pieces, for example under a road bridge, is two
+labels, one per visible piece. A car the camera cannot see at all has no label.
+A car partly behind its neighbour ends where it comes into view, which is also
+where the neighbour ends, so the two spans share that point.
 
 `provenance` has no default. A missing one would otherwise pass model output off
 as a person's work. No record of the original proposal is kept on a `corrected`
 label.
 
 A train is not stored. Cars whose ends coincide exactly form one, and the
-coupling between them is the shared end point.
+coupling between them is the shared end point. A coupling the camera cannot see
+is not recorded: each car's span stops at whatever hides it, and the cars on
+either side read as separate trains.
 
 ## Strictness
 
