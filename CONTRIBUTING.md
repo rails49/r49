@@ -76,9 +76,9 @@ an issue** rather than approximating. The vocabulary is meant to grow.
 **Chain a consist; do not place independent boxes.** Couplings are not labeled
 and not detected — they are derived from the endpoints of neighbouring cars
 coinciding exactly. The editor's chaining gives you that exactness for free;
-two boxes placed separately only come close. Chain a car partly behind its
-neighbour through the point where it comes into view; see
-[FORMAT § Car label](FORMAT.md#car-label).
+two boxes placed separately only come close. End a car partly behind its
+neighbour where it comes into view, and start the neighbour from that point;
+see [FORMAT § Car label](FORMAT.md#car-label).
 
 **`labeled_complete` is the one claim only you can make.** Nothing can verify
 that *every* car in an image has been labeled, so nothing pretends to. Tick it

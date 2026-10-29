@@ -155,16 +155,17 @@ frame. A span over the hidden part would ask a model to predict pixels it
 cannot see. A car seen in two pieces, for example under a road bridge, is two
 labels, one per visible piece. A car the camera cannot see at all has no label.
 A car partly behind its neighbour ends where it comes into view, which is also
-where the neighbour ends, so the two spans share that point.
+where the neighbour ends, so the two spans share that point exactly and the
+cars form one train.
 
 `provenance` has no default. A missing one would otherwise pass model output off
 as a person's work. No record of the original proposal is kept on a `corrected`
 label.
 
 A train is not stored. Cars whose ends coincide exactly form one, and the
-coupling between them is the shared end point. A coupling the camera cannot see
-is not recorded: each car's span stops at whatever hides it, and the cars on
-either side read as separate trains.
+coupling between them is the shared end point. Where something other than the
+two cars, such as a bridge, hides the point where they meet, their ends do not
+coincide and they form separate trains.
 
 ## Strictness
 
