@@ -54,10 +54,13 @@ python=$(mktemp "${TMPDIR:-/tmp}/r49-python.XXXXXX")
 trap 'rm -rf "$packages" "$python"' EXIT
 ./scripts/check-packages.sh "$packages"
 
-# The two packages must read every corpus archive alike.
-uv run --project packages/r49-py --locked python tools/r49-validate/read.py \
-  "${corpus[@]}" > "$python"
-"${validate[@]}" readers --python "$python" "${corpus[@]}"
+# The two packages must read every corpus archive alike. An empty corpus is
+# skipped: bash 3.2 under set -u calls an empty "${corpus[@]}" unbound.
+if [ ${#corpus[@]} -gt 0 ]; then
+  uv run --project packages/r49-py --locked python tools/r49-validate/read.py \
+    "${corpus[@]}" > "$python"
+  "${validate[@]}" readers --python "$python" "${corpus[@]}"
+fi
 
 # The validator: the capture table, then the corpus.
 "${validate[@]}" guidance --check CONTRIBUTING.md
