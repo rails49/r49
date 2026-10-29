@@ -4,11 +4,12 @@ import JSZip from 'jszip';
 import { readFileSync } from 'node:fs';
 import { readerDisagreements, readOutcome, type ReaderOutcome } from '../src/readers.ts';
 
-const FIXTURE = 'fixtures/simple.r49';
-const fixtureBytes = () => readFileSync(new URL(`../../../${FIXTURE}`, import.meta.url));
+// A conformance case, so the test does not depend on what the corpus holds.
+const CASE = 'conformance/cases/format-v4/archive.r49';
+const caseBytes = () => readFileSync(new URL(`../../../${CASE}`, import.meta.url));
 
 const accept = (over: Partial<ReaderOutcome> = {}): ReaderOutcome => ({
-  path: FIXTURE,
+  path: CASE,
   result: 'accept',
   rule: null,
   dpt: 18,
@@ -18,11 +19,12 @@ const accept = (over: Partial<ReaderOutcome> = {}): ReaderOutcome => ({
 });
 
 describe('what the TypeScript package makes of an archive', () => {
-  it('accepts a fixture with its DPT and residual', async () => {
-    const outcome = await readOutcome({ path: FIXTURE, bytes: fixtureBytes() });
+  it('accepts an archive with its DPT and residual', async () => {
+    const outcome = await readOutcome({ path: CASE, bytes: caseBytes() });
     expect(outcome.result).toBe('accept');
     expect(outcome.rule).toBeNull();
-    expect(outcome.dpt).toBeCloseTo(18.0, 1);
+    expect(outcome.dpt).toBeCloseTo(16.5885, 3);
+    expect(outcome.residual).toBeCloseTo(5.3452, 3);
   });
 
   it('rejects with the format rule broken, and no fit', async () => {
@@ -43,10 +45,10 @@ describe('what the TypeScript package makes of an archive', () => {
   });
 
   it('accepts an archive with a stray image and reports it', async () => {
-    const zip = await JSZip.loadAsync(fixtureBytes());
+    const zip = await JSZip.loadAsync(caseBytes());
     zip.file('stray.jpg', new Uint8Array([0xff, 0xd8, 0xff, 0xd9]));
     const outcome = await readOutcome({
-      path: FIXTURE,
+      path: CASE,
       bytes: await zip.generateAsync({ type: 'uint8array' }),
     });
     expect(outcome.result).toBe('accept');
@@ -62,7 +64,7 @@ describe('comparing the two readers', () => {
   it('names an archive one accepts and the other rejects', () => {
     const python = accept({ result: 'reject', rule: 'manifest/schema', dpt: null, residual: null });
     expect(readerDisagreements([accept()], [python])).toEqual([
-      `${FIXTURE}: TypeScript accepts, Python rejects (manifest/schema)`,
+      `${CASE}: TypeScript accepts, Python rejects (manifest/schema)`,
     ]);
   });
 
@@ -70,16 +72,16 @@ describe('comparing the two readers', () => {
     const reject = (rule: string) =>
       accept({ result: 'reject', rule, dpt: null, residual: null });
     expect(readerDisagreements([reject('archive/not-zip')], [reject('archive/no-manifest')])).toEqual([
-      `${FIXTURE}: TypeScript rejects under archive/not-zip, Python under archive/no-manifest`,
+      `${CASE}: TypeScript rejects under archive/not-zip, Python under archive/no-manifest`,
     ]);
   });
 
   it('names a DPT or residual outside the tolerance, or null on one side only', () => {
     expect(readerDisagreements([accept()], [accept({ dpt: 18.001 })])).toEqual([
-      `${FIXTURE}: DPT is 18 in TypeScript, 18.001 in Python`,
+      `${CASE}: DPT is 18 in TypeScript, 18.001 in Python`,
     ]);
     expect(readerDisagreements([accept()], [accept({ residual: null })])).toEqual([
-      `${FIXTURE}: residual is 0.5 in TypeScript, null in Python`,
+      `${CASE}: residual is 0.5 in TypeScript, null in Python`,
     ]);
   });
 
@@ -90,16 +92,16 @@ describe('comparing the two readers', () => {
     const python = accept({ imageMismatches: [orphan, missing] });
     expect(readerDisagreements([typescript], [python])).toEqual([]);
     expect(readerDisagreements([accept({ imageMismatches: [orphan] })], [accept()])).toEqual([
-      `${FIXTURE}: image mismatches are ["images/orphan b.jpg"] in TypeScript, [] in Python`,
+      `${CASE}: image mismatches are ["images/orphan b.jpg"] in TypeScript, [] in Python`,
     ]);
   });
 
   it('names an archive only one reader reported', () => {
     expect(readerDisagreements([accept()], [])).toEqual([
-      `${FIXTURE}: read by TypeScript, missing from Python's report`,
+      `${CASE}: read by TypeScript, missing from Python's report`,
     ]);
     expect(readerDisagreements([], [accept()])).toEqual([
-      `${FIXTURE}: in Python's report, not read by TypeScript`,
+      `${CASE}: in Python's report, not read by TypeScript`,
     ]);
   });
 });
