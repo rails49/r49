@@ -145,9 +145,15 @@ The order of `images` is part of the archive, and a writer keeps it.
 | :--- | :--- | :--- |
 | `id` | non-empty string | Unique among this image's labels. Label ids and sensor ids are separate namespaces and are never compared. |
 | `class` | string | The car's class: a dotted name such as `stock.loco.steam`. Any string is valid in the format; the [vocabulary](#the-vocabulary) is a corpus rule. |
-| `p0`, `p1` | `{ x, y }`, numbers | The span: the car's two ends along its centerline, in image pixels. The car's width is not stored. |
+| `p0`, `p1` | `{ x, y }`, numbers | The span: the two ends of the car's visible part along its centerline, in image pixels. The car's width is not stored. |
 | `provenance` | `"human"`, `"proposed"` or `"corrected"` | How the label came to exist: drawn by a person, a model's proposal accepted as is, or a model's proposal a person then edited. |
 | `proposed_by` | non-empty string | The proposing model's version, in any form. Required when `provenance` is `proposed` or `corrected`; forbidden when it is `human`. |
+
+A span covers what the camera sees of the car, whatever hides the rest: a
+tunnel portal, a bridge, a building, a tree, the edge of the frame. A span over
+the hidden part would ask a model to predict pixels it cannot see. A car seen
+in two pieces, for example under a road bridge, is two labels, one per visible
+piece. A car the camera cannot see at all has no label.
 
 `provenance` has no default. A missing one would otherwise pass model output off
 as a person's work. No record of the original proposal is kept on a `corrected`
