@@ -18,7 +18,8 @@ see [Licences](#licences) for which paths are which.
 One zip holding `manifest.json` plus the JPEGs it describes. The manifest is
 schema version 4: the layout's scale, a calibration that ties image pixels to
 real millimetres, sensor points, and — per image — the cars, each a two-point
-span along its centerline carrying a record of who authored it.
+span along the centerline of its visible part, carrying a record of who
+authored it.
 
 **[FORMAT.md](FORMAT.md) defines the format in full**: every manifest field, the
 calibration fit, the rule ids, and which rules are the format's and which are

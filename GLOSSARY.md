@@ -77,7 +77,7 @@ One locomotive, coach or wagon on the layout. See [FORMAT § Car label](FORMAT.m
 _Avoid_: vehicle, object, stock (for the thing itself)
 
 **Span**:
-The two end points of a car label. See [FORMAT § Car label](FORMAT.md#car-label).
+The two end points of a car label: the ends of the car's visible part. See [FORMAT § Car label](FORMAT.md#car-label).
 
 **Train**:
 Cars whose ends coincide. See [FORMAT § Car label](FORMAT.md#car-label).
