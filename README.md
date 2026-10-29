@@ -46,23 +46,12 @@ every Markdown link goes somewhere.
 
 ```
 archives/<your-github-handle>/<slug>.r49    submissions
-fixtures/<slug>.r49                         the six that seeded this repo
 ```
 
 The **id inside** an archive is its identity; the path is only where it happens
 to live. Renaming or moving a file does not make it a different archive — which
 is why the same layout submitted by two people lands in two directories without
 anything being wrong.
-
-`fixtures/` is deliberately not under `archives/`. Those six sit below the
-minimum resolution and exist so the editor has something to open, not so
-anything can train on them. Glob `archives/**/*.r49` and you get real
-submissions only. They will be deleted once better data supersedes them.
-
-Five of the six carry **no labels at all**. `lighting.r49` now carries 30, added
-by hand — useful for exercising the editor against real labels, and still not a
-submission: it is under the minimum resolution and it is here rather than in
-`archives/`. Do not train on it.
 
 ## Submitting
 
@@ -94,7 +83,7 @@ Two licences, by path:
 
 | Path | Licence |
 | :--- | :--- |
-| `archives/`, `fixtures/` — the archives | [CC BY 4.0](LICENSE) |
+| `archives/` — the archives | [CC BY 4.0](LICENSE) |
 | `FORMAT.md`, and `conformance/` — the cases that test it | [CC BY 4.0](LICENSE) |
 | `GLOSSARY.md`, `README.md`, `CONTRIBUTING.md`, `docs/` — the prose around the format | [CC BY 4.0](LICENSE) |
 | `tools/`, including the corpus validator in `tools/r49-validate/` | [MIT](LICENSE-MIT) |
