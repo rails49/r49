@@ -6,11 +6,15 @@ const codes = (findings: readonly { code: string }[]) => findings.map(f => f.cod
 
 describe('corpus paths', () => {
   describe('the corpus', () => {
-    it('is archives/ and fixtures/, at any depth', () => {
+    it('is archives/, at any depth', () => {
       expect(inCorpus('archives/alice/west-yard.r49')).toBe(true);
       expect(inCorpus('archives/west-yard.r49')).toBe(true);
-      expect(inCorpus('fixtures/cars-0-10.r49')).toBe(true);
-      expect(inCorpus('./fixtures/cars-0-10.r49')).toBe(true);
+      expect(inCorpus('./archives/alice/west-yard.r49')).toBe(true);
+    });
+
+    it('leaves out fixtures/, which is no longer part of it', () => {
+      expect(inCorpus('fixtures/x.r49')).toBe(false);
+      expect(inCorpus('./fixtures/cars-0-10.r49')).toBe(false);
     });
 
     it('leaves out the conformance cases, which are not submissions', () => {
@@ -30,15 +34,17 @@ describe('corpus paths', () => {
       expect(corpusArchives(paths)).toEqual([
         'archives/alice/yard/west.r49',
         'archives/bob/a b.r49',
-        'fixtures/simple.r49',
       ]);
     });
   });
 
   describe('scope', () => {
-    it('recognises a submission and a fixture', () => {
+    it('recognises a submission', () => {
       expect(scopeOf('archives/alice/west-yard.r49')).toBe('archives');
-      expect(scopeOf('fixtures/cars-0-10.r49')).toBe('fixtures');
+    });
+
+    it('gives fixtures/ no scope of its own', () => {
+      expect(scopeOf('fixtures/x.r49')).toBe('unknown');
     });
 
     it('refuses depths the layout does not define', () => {
@@ -47,13 +53,12 @@ describe('corpus paths', () => {
       // level of nesting for nothing.
       expect(scopeOf('archives/west-yard.r49')).toBe('unknown');
       expect(scopeOf('archives/alice/yard/west.r49')).toBe('unknown');
-      expect(scopeOf('fixtures/old/cars.r49')).toBe('unknown');
       expect(scopeOf('west-yard.r49')).toBe('unknown');
     });
 
     it('names the contributor directory only for a real submission', () => {
       expect(handleOf('archives/alice/west-yard.r49')).toBe('alice');
-      expect(handleOf('fixtures/cars-0-10.r49')).toBeNull();
+      expect(handleOf('archives/west-yard.r49')).toBeNull();
     });
   });
 
@@ -82,10 +87,6 @@ describe('corpus paths', () => {
       // handle from; refusing to run would make the tool useless to them.
       expect(checkPath('archives/bob/west-yard.r49', null)).toEqual([]);
       expect(codes(checkPath('archives/bob/cars 0-10.r49', null))).toEqual(['path/slug']);
-    });
-
-    it('does not apply the ownership rule to fixtures', () => {
-      expect(checkPath('fixtures/cars-0-10.r49', 'alice')).toEqual([]);
     });
 
     it('reports one shape error, not a pile, for a path the layout has no place for', () => {

@@ -307,29 +307,11 @@ describe('validate', () => {
     });
   });
 
-  describe('fixtures/ gets a thinner bar', () => {
-    it('holds a fixture to structure only, with no warnings', async () => {
-      const result = await reportFor(
-        await build('fixtures/cars-0-10.r49', {
-          id: null,
-          calibration: [],
-          complete: false,
-          labels: [],
-        })
-      );
-
-      // No id, no calibration, nothing marked complete — every one of which is
-      // a finding under archives/, and none of which is one here.
-      expect(result.errors).toEqual([]);
-      expect(result.warnings).toEqual([]);
-      expect(result.scope).toBe('fixtures');
-    });
-
-    it('still requires a fixture to load and to name its images', async () => {
-      const result = await reportFor(
-        await build('fixtures/cars-0-10.r49', { id: null, extraEntry: 'stray.jpg' })
-      );
-      expect(codes(result.errors)).toContain('images/orphan');
+  describe('fixtures/', () => {
+    it('is held to the full bar, and has no place in the corpus', async () => {
+      const result = await reportFor({ path: 'fixtures/cars-0-10.r49', bytes: await idlessArchive() });
+      expect(result.scope).toBe('unknown');
+      expect(codes(result.errors)).toEqual(['path/shape', 'archive/id']);
     });
   });
 

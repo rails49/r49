@@ -36,8 +36,7 @@ r49-validate guidance --check <path>
 r49-validate readers --python <report.json> <path>...
                                   compare read.py's outcomes with this package's
 r49-validate list [<path>...]     print the corpus archives, each ending in NUL:
-                                  those in archives/ and fixtures/, or those
-                                  among <path>...
+                                  those in archives/, or those among <path>...
 
 Options:
   --author <handle>   the pull request author, for the directory-ownership rule
@@ -190,11 +189,11 @@ async function main(argv: readonly string[]): Promise<number> {
     return values.help ? 0 : 2;
   }
 
-  // Only archives/ and fixtures/ are the corpus. Anything else, such as the
+  // Only archives/ is the corpus. Anything else, such as the
   // conformance cases, is not a submission and is not judged as one.
   const paths = positionals.filter(inCorpus);
   for (const path of positionals.filter(p => !inCorpus(p))) {
-    process.stderr.write(`skipped ${path}: not under archives/ or fixtures/\n`);
+    process.stderr.write(`skipped ${path}: not under archives/\n`);
   }
 
   const submitted: ArchiveInput[] = [];
