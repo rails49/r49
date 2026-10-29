@@ -325,12 +325,9 @@ A submission under `archives/<handle>/` is refused, with the id shown, unless:
 | `archive/id-collision` | No other archive in the same contributor directory has the same `id`. |
 | `labels/provenance` | No label is `proposed`. A person reviews every proposal, which makes it `corrected`. |
 | `labels/class` | Every label's `class` is in the [vocabulary](#the-vocabulary). |
-| `path/shape` | The file sits at `archives/<handle>/<slug>.r49`. `fixtures/<slug>.r49` holds the fixtures. |
+| `path/shape` | The file sits at `archives/<handle>/<slug>.r49`. |
 | `path/slug` | The file name is lowercase letters, digits and single hyphens, then `.r49`. |
 | `path/owner` | `<handle>` is the GitHub handle of whoever submits it. |
-
-The fixtures under `fixtures/` are held to the format rules, `path/shape` and
-`path/slug` only, and draw no warnings. They are not training data.
 
 ### Warnings
 

@@ -35,12 +35,12 @@ node tools/r49-validate/dist/cli.js --author <handle> <path>...
 node tools/r49-validate/dist/cli.js guidance --check CONTRIBUTING.md
 ```
 
-Only paths under `archives/` and `fixtures/`, the corpus, are judged. Any other
+Only paths under `archives/`, the corpus, are judged. Any other
 path is skipped with a note on stderr: the cases under `conformance/` break
 format rules on purpose and are not submissions.
 
 `list` prints the corpus archives, each ending in NUL: every `.r49` under
-`archives/` and `fixtures/`, or, given paths, those of them in the corpus. The
+`archives/`, or, given paths, those of them in the corpus. The
 gate and the workflows take the corpus from it.
 
 ```bash
@@ -78,7 +78,7 @@ id; `validate.ts` implements it and `corpus.ts` holds the path rules. An archive
 `R49Archive.load()` refuses is reported under the id of the format rule it
 breaks (`archive/not-zip`, `manifest/version`, ...), read off the `R49Error`.
 Every archive that loads is then checked for `images/missing` and
-`images/orphan`, read off `imageMismatches()`, fixtures included. Under `archives/<handle>/<slug>.r49` the corpus rules then block on
+`images/orphan`, read off `imageMismatches()`. The corpus rules then block on
 `archive/id`, `archive/id-collision`, `labels/provenance`, `labels/class`,
 `path/shape`, `path/slug` and `path/owner`.
 
@@ -87,7 +87,7 @@ below the recommended DPT, 20), `calibration/unresolved`,
 `calibration/off-reference-plane` and `images/incomplete`.
 
 **A missing `camera_height_mm` is deliberately not one of them.** It would fire
-on every submission from day one, fixtures included, and a warning that always
+on every submission from day one, and a warning that always
 fires devalues the ones that mean something ([#139]). Here the height is a fact
 in the table, alongside the reference height and the obliquity the two of them
 imply. The narrower warning above is the one place the fit silently means
@@ -103,10 +103,6 @@ extent, and an archive calibrated on one patch of a larger layout under-reports.
 [#136]: https://github.com/rails49/occupancy/issues/136
 [#139]: https://github.com/rails49/occupancy/issues/139
 
-`fixtures/<slug>.r49` is held to the format rules, `path/shape` and `path/slug`
-only, and gets **no warnings**: the six are below the recommended DPT by
-design, so annotating that on every pull request would be noise.
-
 ## The two readers agree on the corpus
 
 The conformance cases show `@rails49/r49` and the Python reader, `rails49-r49`,
@@ -118,8 +114,8 @@ on accept. Any difference, or an archive only one side reported, exits 1.
 
 ```bash
 uv run --project packages/r49-py --locked python tools/r49-validate/read.py \
-  fixtures/*.r49 > python.json
-node tools/r49-validate/dist/cli.js readers --python python.json fixtures/*.r49
+  archives/*/*.r49 > python.json
+node tools/r49-validate/dist/cli.js readers --python python.json archives/*/*.r49
 ```
 
 ## The guidance table is generated, never typed
