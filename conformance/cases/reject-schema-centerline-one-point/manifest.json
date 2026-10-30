@@ -1,0 +1,22 @@
+{
+  "version": 4,
+  "layout": {
+    "scale": "HO",
+    "centerlines": [
+      {
+        "points": [
+          {
+            "x": 10,
+            "y": 20
+          }
+        ]
+      }
+    ]
+  },
+  "camera": {
+    "resolution": {
+      "width": 1920,
+      "height": 1080
+    }
+  }
+}

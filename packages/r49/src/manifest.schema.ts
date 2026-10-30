@@ -352,6 +352,21 @@ const SensorSchema = z
   })
   .strict();
 
+function noCoincidentNeighbours(points: readonly Point[]): boolean {
+  return points.every((p, i) => i === 0 || p.x !== points[i - 1].x || p.y !== points[i - 1].y);
+}
+
+const CenterlineSchema = z
+  .object({
+    points: z
+      .array(PointSchema)
+      .min(2)
+      .refine(noCoincidentNeighbours, {
+        message: 'two consecutive centerline points coincide: every segment needs a direction',
+      }),
+  })
+  .strict();
+
 // `provenance` is a discriminated union with no default. `proposed_by` is
 // required on `proposed`/`corrected` and forbidden on `human`, enforced by the
 // schema rather than by a downstream runtime check: a default of `human` would
@@ -442,6 +457,8 @@ const LayoutSchema = z
     calibration: CalibrationSchema,
     /** Per **layout**, not per image: placing one answers for every frame. */
     sensors: z.array(SensorSchema).refine(sensorIds.check, sensorIds.options).default([]),
+    /** Undefined when the archive has none, which FORMAT.md reads as []. */
+    centerlines: z.array(CenterlineSchema).optional(),
   })
   .strict();
 
@@ -580,6 +597,7 @@ export type WorldPoint = z.infer<typeof WorldPointSchema>;
 export type ReferencePoint = z.infer<typeof ReferencePointSchema>;
 export type Calibration = z.infer<typeof CalibrationSchema>;
 export type Sensor = z.infer<typeof SensorSchema>;
+export type Centerline = z.infer<typeof CenterlineSchema>;
 export type CarLabel = z.infer<typeof CarLabelSchema>;
 export type Provenance = CarLabel['provenance'];
 export type Image = z.infer<typeof ImageSchema>;

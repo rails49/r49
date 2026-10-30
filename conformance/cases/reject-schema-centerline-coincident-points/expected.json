@@ -1,0 +1,5 @@
+{
+  "description": "Two consecutive centerline points that coincide: refused, since the segment between them has no direction.",
+  "result": "reject",
+  "rule": "manifest/schema"
+}

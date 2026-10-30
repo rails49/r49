@@ -71,6 +71,20 @@ class TestLoad:
         image = r49.load(ARCHIVE).manifest.images[0]
         assert (image.labeled_complete, image.labels) == (False, [])
         assert "labels" not in image.model_fields_set
+        layout = r49.load(ARCHIVE).manifest.layout
+        assert layout.centerlines == []
+        assert "centerlines" not in layout.model_fields_set
+
+    def test_reads_centerline_points_in_order(self) -> None:
+        centerline = {"points": [{"x": 2, "y": 3}, {"x": 0, "y": 1}]}
+        data = {
+            "version": 4,
+            "layout": {"scale": "HO", "centerlines": [centerline]},
+            "camera": {"resolution": {"width": 4, "height": 3}},
+        }
+        layout = r49.parse_manifest(json.dumps(data).encode()).layout
+        points = [r49.Point(x=2, y=3), r49.Point(x=0, y=1)]
+        assert layout.centerlines == [r49.Centerline(points=points)]
 
     def test_names_the_rule_when_refusing(self) -> None:
         with pytest.raises(r49.R49Error) as refused:
