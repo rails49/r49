@@ -34,10 +34,11 @@ export {
 //── Manifest types (v4) ──────────────────────────────────────────────────────
 // The shape of a parsed manifest, as returned by R49Archive.getManifest().
 //
-// Two geometries, differing in scope and in whether a model ever sees them:
+// Three geometries, differing in scope and in whether a model ever sees them:
 // a CarLabel is the two ends of a car's visible part along its centerline,
 // per image, trained on, and carries provenance; a Sensor is a single query
-// point, per layout, never trained on, and carries none.
+// point, per layout, never trained on, and carries none; a Centerline is the
+// line along the middle of a track, per layout, and carries none.
 export type {
   ManifestData,
   Layout,
@@ -46,6 +47,7 @@ export type {
   CarLabel,
   Provenance,
   Sensor,
+  Centerline,
   Calibration,
   ReferencePoint,
   Point,

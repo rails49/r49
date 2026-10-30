@@ -38,6 +38,20 @@
         "name": "siding 3"
       }
     ],
+    "centerlines": [
+      {
+        "points": [
+          {
+            "x": 10,
+            "y": 20
+          },
+          {
+            "x": 100,
+            "y": 50
+          }
+        ]
+      }
+    ],
     "name": "Yard",
     "description": "west end",
     "contact": "me@example.com"

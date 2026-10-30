@@ -9,6 +9,7 @@ shorter than it arrived (FORMAT.md § Strictness). Strict, because a JSON
 from __future__ import annotations
 
 import json
+from itertools import pairwise
 from typing import Annotated, Any, Final, Literal
 
 from pydantic import (
@@ -121,6 +122,22 @@ class Sensor(_Strict):
     name: str | None = None
 
 
+class Centerline(_Strict):
+    """The line along the middle of a track, as image positions in order."""
+
+    points: list[Point] = Field(min_length=2)
+
+    @field_validator("points")
+    @classmethod
+    def _no_coincident_neighbours(cls, points: list[Point]) -> list[Point]:
+        if any((a.x, a.y) == (b.x, b.y) for a, b in pairwise(points)):
+            raise PydanticCustomError(
+                "coincident_points",
+                "two consecutive centerline points coincide: every segment needs a direction",
+            )
+        return points
+
+
 Provenance = Literal["human", "proposed", "corrected"]
 """How a car label came to exist."""
 
@@ -177,6 +194,7 @@ class Layout(_Strict):
     scale: Scale
     calibration: Calibration = Field(default_factory=Calibration)
     sensors: list[Sensor] = []
+    centerlines: list[Centerline] = []
 
     @field_validator("sensors")
     @classmethod

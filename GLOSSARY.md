@@ -42,6 +42,9 @@ _Avoid_: frame (for a stored image; a frame is one picture from the live camera)
 A point on the layout where occupancy must be reported. See [FORMAT § Sensor](FORMAT.md#sensor).
 _Avoid_: detector, block, marker
 
+**Centerline**:
+The line along the middle of a track, drawn once per archive and shared by all its images. See [FORMAT § Centerline](FORMAT.md#centerline).
+
 **Scale**:
 The modelling scale of a layout (HO, N, Z, ...), which fixes its ratio to the prototype. See [FORMAT § Scales and gauge](FORMAT.md#scales-and-gauge).
 

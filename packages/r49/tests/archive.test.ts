@@ -146,6 +146,20 @@ describe('R49Archive', () => {
       expect(getDPTResidual(loaded.getManifest())).toBeGreaterThan(0);
     });
 
+    it('preserves centerlines, and writes none where there were none', async () => {
+      const centerlines = [
+        { points: [{ x: 0, y: 540 }, { x: 960.5, y: 500 }, { x: 1920, y: 540 }] },
+        { points: [{ x: -40, y: 900 }, { x: 2000, y: 1100 }] },
+      ];
+      const traced = await roundTrip(manifest({
+        layout: { scale: 'HO', calibration: { points: [] }, sensors: [], centerlines },
+      }));
+      expect(traced.getManifest().layout.centerlines).toEqual(centerlines);
+
+      const untraced = await roundTrip(manifest());
+      expect('centerlines' in untraced.getManifest().layout).toBe(false);
+    });
+
     it('preserves layout metadata and camera resolution', async () => {
       const loaded = await roundTrip(manifest({
         layout: {
@@ -351,6 +365,26 @@ describe('R49Archive', () => {
           },
         }),
         'layout.sensors.0.colour',
+      ],
+      [
+        'a centerline',
+        manifest({
+          layout: {
+            scale: 'HO',
+            centerlines: [{ points: [{ x: 0, y: 0 }, { x: 1, y: 1 }], name: 'main' }],
+          },
+        }),
+        'layout.centerlines.0.name',
+      ],
+      [
+        'a centerline point',
+        manifest({
+          layout: {
+            scale: 'HO',
+            centerlines: [{ points: [{ x: 0, y: 0 }, { x: 1, y: 1, z: 0 }] }],
+          },
+        }),
+        'layout.centerlines.0.points.1.z',
       ],
       ['camera', manifest({ camera: { resolution: { width: 1920, height: 1080 }, fps: 30 } }), 'camera.fps'],
       ['camera resolution', manifest({ camera: { resolution: { width: 1920, height: 1080, depth: 8 } } }), 'camera.resolution.depth'],
