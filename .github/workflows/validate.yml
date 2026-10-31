@@ -41,7 +41,8 @@ jobs:
     if: github.event_name == 'pull_request'
     runs-on: ubuntu-latest
     steps:
-      # Full history: the changed-file diff needs the base commit present.
+      # Full history: the changed-file diff, and the validator reading the
+      # corpus as it was before this pull request, need the base commit present.
       - uses: actions/checkout@v7
         with:
           fetch-depth: 0
@@ -76,8 +77,6 @@ jobs:
           git diff --diff-filter=ACMR -z --name-only "$BASE" HEAD \
             | xargs -0 -r node tools/r49-validate/dist/cli.js list \
             > "$RUNNER_TEMP/changed.nul"
-          git diff --diff-filter=A -z --name-only "$BASE" HEAD \
-            | tr '\0' '\n' > "$RUNNER_TEMP/added.txt"
           # `tr -d ' '` because wc pads its count on some platforms, and the
           # step that reads this output compares it against the string "0".
           count=$(tr -cd '\0' < "$RUNNER_TEMP/changed.nul" | wc -c | tr -d ' ')
@@ -97,11 +96,14 @@ jobs:
       # produces both, so the annotations and the log cannot disagree about what
       # was found. `--author` comes through the environment rather than through
       # `${{ }}` interpolation, so a handle is never pasted into a shell.
+      # `--base` is the corpus before this pull request, which tells an update
+      # from a new archive and says what the update changed.
       - name: Validate
         id: validate
         if: steps.changed.outputs.count != '0'
         env:
           AUTHOR: ${{ github.event.pull_request.user.login }}
+          BASE: ${{ github.event.pull_request.base.sha }}
         run: |
           paths=()
           while IFS= read -r -d '' path; do paths+=("$path"); done \
@@ -109,7 +111,7 @@ jobs:
           printf 'validating %s\n' "${paths[@]}"
 
           set +e
-          node tools/r49-validate/dist/cli.js --author "$AUTHOR" -- "${paths[@]}" \
+          node tools/r49-validate/dist/cli.js --author "$AUTHOR" --base "$BASE" -- "${paths[@]}" \
             > "$RUNNER_TEMP/report.json" 2> "$RUNNER_TEMP/report.txt"
           status=$?
           set -e
@@ -150,8 +152,8 @@ jobs:
       # threshold exists, and inventing one here would put a number into the
       # pipeline that nothing earned.
       #
-      # `new`/`update` is the one column the validator cannot supply: it is a
-      # git fact, not an archive fact.
+      # The change column is the validator's: an update is recognised by its id,
+      # so a moved archive is an update, not a new one.
       - name: Summarise
         if: always() && steps.validate.outputs.status != '' && steps.validate.outputs.status != '2'
         run: |
@@ -160,12 +162,25 @@ jobs:
             echo
             echo "| Archive | Change | Scope | id | DPT | Residual px | Images | Labels | Complete | Errors | Warnings |"
             echo "| :--- | :--- | :--- | :--- | ---: | ---: | ---: | ---: | ---: | ---: | ---: |"
-            jq -r --rawfile added "$RUNNER_TEMP/added.txt" '
-              ($added | split("\n") | map(select(length > 0))) as $new |
+            jq -r '
               def dash: if . == null then "—" else tostring end;
+              def change:
+                if . == null then "—"
+                elif .kind == "new" then "new"
+                else . as $c | [
+                  (if $c.added > 0 then "\($c.added) added" else empty end),
+                  (if $c.removed > 0 then "\($c.removed) removed" else empty end),
+                  (if $c.renamed > 0 then "\($c.renamed) renamed" else empty end),
+                  (if $c.replaced > 0 then "\($c.replaced) replaced" else empty end),
+                  (if $c.relabeled > 0 then "\($c.relabeled) relabeled" else empty end),
+                  (if $c.completed > 0 then "\($c.completed) newly complete" else empty end),
+                  (if $c.uncompleted > 0 then "\($c.uncompleted) no longer complete" else empty end),
+                  (if $c.calibration then "calibration changed" else empty end)
+                ] | "update of `\($c.from)`" + (if length == 0 then "" else ": " + join(", ") end)
+                end;
               def round1: if . == null then "—" else ((. * 10 | round) / 10 | tostring) end;
               .archives[] | .path as $p |
-              "| `\($p)` | \(if ($new | index($p)) then "new" else "update" end) | \(.scope)"
+              "| `\($p)` | \(.change | change) | \(.scope)"
               + " | `\(.id | dash)` | \(.dpt | round1) | \(.dptResidual | round1)"
               + " | \(.images | dash) | \(.labels | dash) | \(.complete | dash)/\(.images | dash)"
               + " | \(.errors | length) | \(.warnings | length) |"
