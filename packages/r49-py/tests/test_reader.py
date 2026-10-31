@@ -75,16 +75,19 @@ class TestLoad:
         assert layout.centerlines == []
         assert "centerlines" not in layout.model_fields_set
 
-    def test_reads_centerline_points_in_order(self) -> None:
-        centerline = {"points": [{"x": 2, "y": 3}, {"x": 0, "y": 1}]}
+    def test_reads_centerline_nodes_in_order(self) -> None:
+        centerline = {"nodes": [{"x": 2, "y": 3, "heading": 0.5}, {"x": 0, "y": 1, "heading": -3}]}
         data = {
             "version": 4,
             "layout": {"scale": "HO", "centerlines": [centerline]},
             "camera": {"resolution": {"width": 4, "height": 3}},
         }
         layout = r49.parse_manifest(json.dumps(data).encode()).layout
-        points = [r49.Point(x=2, y=3), r49.Point(x=0, y=1)]
-        assert layout.centerlines == [r49.Centerline(points=points)]
+        nodes = [
+            r49.CenterlineNode(x=2, y=3, heading=0.5),
+            r49.CenterlineNode(x=0, y=1, heading=-3),
+        ]
+        assert layout.centerlines == [r49.Centerline(nodes=nodes)]
 
     def test_names_the_rule_when_refusing(self) -> None:
         with pytest.raises(r49.R49Error) as refused:

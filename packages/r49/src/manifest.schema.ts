@@ -352,17 +352,26 @@ const SensorSchema = z
   })
   .strict();
 
-function noCoincidentNeighbours(points: readonly Point[]): boolean {
-  return points.every((p, i) => i === 0 || p.x !== points[i - 1].x || p.y !== points[i - 1].y);
+const CenterlineNodeSchema = z
+  .object({
+    x: finite(),
+    y: finite(),
+    /** Radians, atan2(dy, dx) in image pixels, pointing the way the nodes run. */
+    heading: finite(),
+  })
+  .strict();
+
+function noCoincidentNeighbours(nodes: readonly CenterlineNode[]): boolean {
+  return nodes.every((n, i) => i === 0 || n.x !== nodes[i - 1].x || n.y !== nodes[i - 1].y);
 }
 
 const CenterlineSchema = z
   .object({
-    points: z
-      .array(PointSchema)
+    nodes: z
+      .array(CenterlineNodeSchema)
       .min(2)
       .refine(noCoincidentNeighbours, {
-        message: 'two consecutive centerline points coincide: every segment needs a direction',
+        message: 'two consecutive centerline nodes coincide: every segment needs a length',
       }),
   })
   .strict();
@@ -597,6 +606,7 @@ export type WorldPoint = z.infer<typeof WorldPointSchema>;
 export type ReferencePoint = z.infer<typeof ReferencePointSchema>;
 export type Calibration = z.infer<typeof CalibrationSchema>;
 export type Sensor = z.infer<typeof SensorSchema>;
+export type CenterlineNode = z.infer<typeof CenterlineNodeSchema>;
 export type Centerline = z.infer<typeof CenterlineSchema>;
 export type CarLabel = z.infer<typeof CarLabelSchema>;
 export type Provenance = CarLabel['provenance'];

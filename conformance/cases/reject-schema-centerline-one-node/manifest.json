@@ -4,10 +4,11 @@
     "scale": "HO",
     "centerlines": [
       {
-        "points": [
+        "nodes": [
           {
             "x": 10,
-            "y": 20
+            "y": 20,
+            "heading": 0
           }
         ]
       }

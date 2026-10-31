@@ -4,14 +4,16 @@
     "scale": "HO",
     "centerlines": [
       {
-        "points": [
+        "nodes": [
           {
             "x": 10,
-            "y": 20
+            "y": 20,
+            "heading": 0.3218
           },
           {
             "x": 100,
-            "y": 50
+            "y": 50,
+            "heading": 0.3218
           }
         ],
         "name": "main line"

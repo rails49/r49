@@ -51,7 +51,7 @@ shares them.
     },
     "sensors": [ { "id": "…", "x": 0, "y": 0, "name": "…" } ],  // optional, reads as []; name optional
     "centerlines": [                                      // optional, reads as []
-      { "points": [ { "x": 0, "y": 0 }, { "x": 100, "y": 0 } ] }
+      { "nodes": [ { "x": 0, "y": 0, "heading": 0 }, { "x": 100, "y": 0, "heading": 0 } ] }
     ]
   },
   "camera": { "resolution": { "width": 1920, "height": 1080 }, "model": "…" },  // model optional
@@ -130,10 +130,37 @@ A reference point has no `id` and no name. Nothing refers to a single point.
 
 | Field | Type | Meaning |
 | :--- | :--- | :--- |
-| `points` | array of `{ x, y }`, numbers, at least two | The line's image positions, in order. Two consecutive points never coincide, so every segment has a direction. Points may lie outside the frame, as a span's may. |
+| `nodes` | array of node, at least two | The line's nodes, in order. Two consecutive nodes are never at the same position, so every segment has a length. Nodes may lie outside the frame, as a span's ends may. |
 
 A centerline has no `id` and no name. Nothing refers to a single centerline.
 Centerlines do not branch: a turnout or a crossing is not traced.
+
+### Node
+
+| Field | Type | Meaning |
+| :--- | :--- | :--- |
+| `x`, `y` | numbers | The node's image position. |
+| `heading` | number | The direction the track runs at the node, in radians: `atan2(dy, dx)` in image pixels, pointing from this node towards the next. Any finite number; headings that differ by a multiple of 2π are the same direction. |
+
+Between two consecutive nodes A and B the centerline is the cubic Bézier curve
+from A to B with control points
+
+```text
+A + h · (cos θA, sin θA)
+B − h · (cos θB, sin θB)
+```
+
+where θA and θB are the two headings, `d` is the distance from A to B, `φ` is
+θB − θA brought into (−π, π], and
+
+```text
+h = d / (3 · cos²(φ / 4))
+```
+
+Two segments that meet at a node share its heading, so a centerline has no
+kink. Both headings along the chord give a straight segment. Headings symmetric
+about the chord give a curve within 0.03 % of the radius of the circular arc
+through A and B, for turns up to 90°.
 
 ### `camera`
 
@@ -222,7 +249,7 @@ more than one rule, which one is reported is not specified.
 | `manifest/unknown-key` | an object holds a key this document does not define. |
 | `manifest/duplicate-id` | two sensors, or two labels in one image, share an `id`. |
 | `manifest/provenance` | a label's `provenance` is missing or not one of the three, or `proposed_by` is present on `human`, or missing or empty on `proposed` or `corrected`. |
-| `manifest/schema` | any other field is missing, has the wrong type or is out of range: no `scale`, an unknown scale name, an empty `id`, a `camera_height_mm` of 0 or below, a non-integer resolution, a centerline of one point or with two consecutive points that coincide, a number too large to be finite such as `1e999`. |
+| `manifest/schema` | any other field is missing, has the wrong type or is out of range: no `scale`, an unknown scale name, an empty `id`, a `camera_height_mm` of 0 or below, a non-integer resolution, a centerline of one node or with two consecutive nodes at one position, a node with no `heading`, a number too large to be finite such as `1e999`. |
 
 Two rules are about the images, and a reader reports them instead of refusing
 the archive. It loads the archive and lists each disagreement, by its file name,

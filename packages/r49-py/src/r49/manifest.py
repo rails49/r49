@@ -122,20 +122,29 @@ class Sensor(_Strict):
     name: str | None = None
 
 
+class CenterlineNode(_Strict):
+    """A point on a centerline and the direction the track runs there."""
+
+    x: float
+    y: float
+    heading: float
+    """Radians, atan2(dy, dx) in image pixels, pointing the way the nodes run."""
+
+
 class Centerline(_Strict):
-    """The line along the middle of a track, as image positions in order."""
+    """The line along the middle of a track, as nodes in order."""
 
-    points: list[Point] = Field(min_length=2)
+    nodes: list[CenterlineNode] = Field(min_length=2)
 
-    @field_validator("points")
+    @field_validator("nodes")
     @classmethod
-    def _no_coincident_neighbours(cls, points: list[Point]) -> list[Point]:
-        if any((a.x, a.y) == (b.x, b.y) for a, b in pairwise(points)):
+    def _no_coincident_neighbours(cls, nodes: list[CenterlineNode]) -> list[CenterlineNode]:
+        if any((a.x, a.y) == (b.x, b.y) for a, b in pairwise(nodes)):
             raise PydanticCustomError(
-                "coincident_points",
-                "two consecutive centerline points coincide: every segment needs a direction",
+                "coincident_nodes",
+                "two consecutive centerline nodes coincide: every segment needs a length",
             )
-        return points
+        return nodes
 
 
 Provenance = Literal["human", "proposed", "corrected"]

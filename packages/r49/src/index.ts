@@ -48,6 +48,7 @@ export type {
   Provenance,
   Sensor,
   Centerline,
+  CenterlineNode,
   Calibration,
   ReferencePoint,
   Point,

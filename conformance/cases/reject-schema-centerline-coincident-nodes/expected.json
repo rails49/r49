@@ -1,0 +1,5 @@
+{
+  "description": "Two consecutive centerline nodes at one position: refused, since the segment between them has no length.",
+  "result": "reject",
+  "rule": "manifest/schema"
+}

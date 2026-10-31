@@ -1,0 +1,5 @@
+{
+  "description": "An unknown key in a centerline node: refused, not ignored.",
+  "result": "reject",
+  "rule": "manifest/unknown-key"
+}

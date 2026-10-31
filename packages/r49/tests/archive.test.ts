@@ -148,8 +148,14 @@ describe('R49Archive', () => {
 
     it('preserves centerlines, and writes none where there were none', async () => {
       const centerlines = [
-        { points: [{ x: 0, y: 540 }, { x: 960.5, y: 500 }, { x: 1920, y: 540 }] },
-        { points: [{ x: -40, y: 900 }, { x: 2000, y: 1100 }] },
+        {
+          nodes: [
+            { x: 0, y: 540, heading: -0.0416 },
+            { x: 960.5, y: 500, heading: 0 },
+            { x: 1920, y: 540, heading: 0.0416 },
+          ],
+        },
+        { nodes: [{ x: -40, y: 900, heading: 0.0976 }, { x: 2000, y: 1100, heading: 0.0976 }] },
       ];
       const traced = await roundTrip(manifest({
         layout: { scale: 'HO', calibration: { points: [] }, sensors: [], centerlines },
@@ -371,20 +377,20 @@ describe('R49Archive', () => {
         manifest({
           layout: {
             scale: 'HO',
-            centerlines: [{ points: [{ x: 0, y: 0 }, { x: 1, y: 1 }], name: 'main' }],
+            centerlines: [{ nodes: [{ x: 0, y: 0, heading: 0 }, { x: 1, y: 1, heading: 0 }], name: 'main' }],
           },
         }),
         'layout.centerlines.0.name',
       ],
       [
-        'a centerline point',
+        'a centerline node',
         manifest({
           layout: {
             scale: 'HO',
-            centerlines: [{ points: [{ x: 0, y: 0 }, { x: 1, y: 1, z: 0 }] }],
+            centerlines: [{ nodes: [{ x: 0, y: 0, heading: 0 }, { x: 1, y: 1, heading: 0, z: 0 }] }],
           },
         }),
-        'layout.centerlines.0.points.1.z',
+        'layout.centerlines.0.nodes.1.z',
       ],
       ['camera', manifest({ camera: { resolution: { width: 1920, height: 1080 }, fps: 30 } }), 'camera.fps'],
       ['camera resolution', manifest({ camera: { resolution: { width: 1920, height: 1080, depth: 8 } } }), 'camera.resolution.depth'],
