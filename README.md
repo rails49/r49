@@ -50,9 +50,10 @@ archives/<your-github-handle>/<slug>.r49    submissions
 ```
 
 The **id inside** an archive is its identity; the path is only where it happens
-to live. Renaming or moving a file does not make it a different archive — which
-is why the same layout submitted by two people lands in two directories without
-anything being wrong.
+to live. Renaming or moving a file does not make it a different archive. No two
+archives in the corpus share an id, and no photograph is in the corpus twice.
+The same layout photographed by two people is two archives, with two ids, in two
+directories.
 
 ## Submitting
 
@@ -62,7 +63,9 @@ matter most are not the obvious ones.
 
 CI checks what is mechanical, with [FORMAT.md § Corpus rules](FORMAT.md#corpus-rules)
 as the list: that the archive parses, that its images resolve, that no label is
-unreviewed model output, that every class is in the vocabulary.
+unreviewed model output, that every class is in the vocabulary, that no image is
+already in the corpus. For an update to an archive already here, it lists what
+changed.
 It **cannot** check whether your boxes actually land on cars, which is the thing
 that decides whether a submission is worth having. That part is a person reading
 a sample.

@@ -1,11 +1,12 @@
+import { execFileSync } from 'node:child_process';
 import { readFile, readdir } from 'node:fs/promises';
-import { dirname, join } from 'node:path';
+import { join, normalize } from 'node:path';
 import { parseArgs } from 'node:util';
-import { validate, type ArchiveInput } from './validate.ts';
+import { readContents, validate, type ArchiveInput, type Contents } from './validate.ts';
 import { checkGuidance, guidanceTable, REFERENCE_WIDTH_PX } from './guidance.ts';
-import { CORPUS_DIRECTORIES, corpusArchives, handleOf, inCorpus } from './corpus.ts';
+import { CORPUS_DIRECTORIES, corpusArchives, inCorpus } from './corpus.ts';
 import { readerDisagreements, readOutcome, type ReaderOutcome } from './readers.ts';
-import type { ArchiveReport, Report } from './report.ts';
+import type { ArchiveReport, Change, Report } from './report.ts';
 
 /**
  * The only impure module: reads files, writes streams, chooses an exit code.
@@ -40,37 +41,63 @@ r49-validate list [<path>...]     print the corpus archives, each ending in NUL:
 
 Options:
   --author <handle>   the pull request author, for the directory-ownership rule
+  --base <ref>        the git commit before the submission, for what an update changed
   --check <path>      guidance only; verify instead of print. Exit 1 on drift.
   --python <path>     readers only; the JSON read.py wrote. Exit 1 on any difference.
   --width <px>        guidance only; reference frame width (default ${REFERENCE_WIDTH_PX})
 `.trim();
 
-/**
- * The archives already committed beside a submission, for the id-collision
- * check. Only the author's own directories are read, and a submitted path is
- * never returned as its own sibling.
- */
-async function siblingsOf(paths: readonly string[]): Promise<ArchiveInput[]> {
-  const submitted = new Set(paths);
-  const directories = new Set(paths.filter(p => handleOf(p) !== null).map(p => dirname(p)));
-  const siblings: ArchiveInput[] = [];
-
-  for (const directory of directories) {
-    let entries: string[];
-    try {
-      entries = await readdir(directory);
-    } catch {
-      // A brand-new contributor directory does not exist until the merge.
-      continue;
-    }
-    for (const entry of entries) {
-      const path = join(directory, entry);
-      if (!entry.endsWith('.r49') || submitted.has(path)) continue;
-      siblings.push({ path, bytes: await readFile(path) });
-    }
+/** Every corpus archive in the working tree. */
+async function corpusPaths(): Promise<string[]> {
+  const paths: string[] = [];
+  for (const directory of CORPUS_DIRECTORIES) {
+    const entries = await readdir(directory, { recursive: true });
+    paths.push(...entries.map(entry => join(directory, entry)));
   }
+  return corpusArchives(paths);
+}
 
-  return siblings;
+/** The corpus in the working tree, without the submitted paths. */
+async function corpusBeside(submitted: readonly string[]): Promise<Contents[]> {
+  const skip = new Set(submitted);
+  const corpus: Contents[] = [];
+  for (const path of await corpusPaths()) {
+    if (skip.has(path)) continue;
+    const contents = await readContents({ path, bytes: await readFile(path) });
+    if (contents) corpus.push(contents);
+  }
+  return corpus;
+}
+
+/** The corpus at a git commit, read from git so no checkout of it is needed. */
+async function corpusAt(ref: string): Promise<Contents[]> {
+  const listing = execFileSync('git', [
+    'ls-tree', '-r', '-z', '--name-only', ref, '--', ...CORPUS_DIRECTORIES,
+  ]).toString('utf8');
+  const corpus: Contents[] = [];
+  for (const path of corpusArchives(listing.split('\0').filter(p => p !== ''))) {
+    const bytes = execFileSync('git', ['cat-file', 'blob', `${ref}:${path}`], {
+      maxBuffer: 1 << 30,
+    });
+    const contents = await readContents({ path, bytes });
+    if (contents) corpus.push(contents);
+  }
+  return corpus;
+}
+
+/** What an update changed, in a few words. */
+function changeText(change: Extract<Change, { kind: 'update' }>): string {
+  const parts = [
+    change.added > 0 ? `${change.added} added` : '',
+    change.removed > 0 ? `${change.removed} removed` : '',
+    change.renamed > 0 ? `${change.renamed} renamed` : '',
+    change.replaced > 0 ? `${change.replaced} replaced` : '',
+    change.relabeled > 0 ? `${change.relabeled} relabeled` : '',
+    change.completed > 0 ? `${change.completed} newly complete` : '',
+    change.uncompleted > 0 ? `${change.uncompleted} no longer complete` : '',
+    change.calibration ? 'calibration changed' : '',
+  ].filter(part => part !== '');
+  return parts.length === 0 ? 'nothing changed' : parts.join(', ');
 }
 
 /** One archive's findings, for a person. */
@@ -99,6 +126,9 @@ function humanLines(report: ArchiveReport): string[] {
         obliquity,
     );
   }
+  if (report.change?.kind === 'update') {
+    lines.push(`   update  of ${report.change.from}: ${changeText(report.change)}`);
+  }
   for (const error of report.errors) lines.push(`   error   ${error.message}`);
   for (const warning of report.warnings) lines.push(`   warning ${warning.message}`);
   return lines;
@@ -117,14 +147,8 @@ function humanReport(report: Report): string {
 
 async function main(argv: readonly string[]): Promise<number> {
   if (argv[0] === 'list') {
-    const paths = argv.slice(1);
-    if (paths.length === 0) {
-      for (const directory of CORPUS_DIRECTORIES) {
-        const entries = await readdir(directory, { recursive: true });
-        paths.push(...entries.map(entry => join(directory, entry)));
-      }
-    }
-    for (const path of corpusArchives(paths)) process.stdout.write(`${path}\0`);
+    const paths = argv.length > 1 ? corpusArchives(argv.slice(1)) : await corpusPaths();
+    for (const path of paths) process.stdout.write(`${path}\0`);
     return 0;
   }
 
@@ -180,7 +204,11 @@ async function main(argv: readonly string[]): Promise<number> {
 
   const { values, positionals } = parseArgs({
     args: [...argv],
-    options: { author: { type: 'string' }, help: { type: 'boolean' } },
+    options: {
+      author: { type: 'string' },
+      base: { type: 'string' },
+      help: { type: 'boolean' },
+    },
     allowPositionals: true,
   });
 
@@ -191,7 +219,8 @@ async function main(argv: readonly string[]): Promise<number> {
 
   // Only archives/ is the corpus. Anything else, such as the
   // conformance cases, is not a submission and is not judged as one.
-  const paths = positionals.filter(inCorpus);
+  // Normalised, so `./archives/...` is the same path the corpus listing gives.
+  const paths = positionals.filter(inCorpus).map(normalize);
   for (const path of positionals.filter(p => !inCorpus(p))) {
     process.stderr.write(`skipped ${path}: not under archives/\n`);
   }
@@ -203,7 +232,8 @@ async function main(argv: readonly string[]): Promise<number> {
 
   const report = await validate(submitted, {
     author: values.author ?? null,
-    siblings: await siblingsOf(paths),
+    corpus: await corpusBeside(paths),
+    base: values.base === undefined ? null : await corpusAt(values.base),
   });
 
   process.stdout.write(JSON.stringify(report, null, 2) + '\n');

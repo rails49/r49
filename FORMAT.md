@@ -346,7 +346,8 @@ A submission under `archives/<handle>/` is refused, with the id shown, unless:
 | :--- | :--- |
 | *a format rule id* | The archive is valid under every [format rule](#format-rules). |
 | `archive/id` | The archive has an `id`. |
-| `archive/id-collision` | No other archive in the same contributor directory has the same `id`. |
+| `archive/id-collision` | No other archive in the corpus has the same `id`. |
+| `images/duplicate` | No image has the same bytes as another image in this archive or in any other archive in the corpus. |
 | `labels/provenance` | No label is `proposed`. A person reviews every proposal, which makes it `corrected`. |
 | `labels/class` | Every label's `class` is in the [vocabulary](#the-vocabulary). |
 | `path/shape` | The file sits at `archives/<handle>/<slug>.r49`. |
@@ -363,6 +364,16 @@ A warning is reported and never refuses a submission.
 | `calibration/unresolved` | DPT does not resolve. |
 | `calibration/off-reference-plane` | Points are left out as off the reference plane, because there is no camera height. |
 | `images/incomplete` | Some images are not labeled complete. |
+
+An **update** is a submission with the `id` of an archive already in the
+corpus; its path may differ. These warnings compare it with that archive:
+
+| Rule id | Warns when |
+| :--- | :--- |
+| `archive/id-changed` | The file replaces one at the same path that has a different `id`. |
+| `images/removed` | An image the archive held is gone. |
+| `images/renamed` | An image the archive held is stored under a new filename. |
+| `images/replaced` | An image's filename holds different bytes. |
 
 ### The recommended DPT
 
