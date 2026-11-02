@@ -373,6 +373,11 @@ const CenterlineSchema = z
       .refine(noCoincidentNeighbours, {
         message: 'two consecutive centerline nodes coincide: every segment needs a length',
       }),
+    /**
+     * The editor's input, in track order; other readers ignore it. Undefined
+     * when the archive has none, which FORMAT.md reads as [].
+     */
+    clicks: z.array(PointSchema).optional(),
   })
   .strict();
 

@@ -45,6 +45,9 @@ _Avoid_: detector, block, marker
 **Centerline**:
 The line along the middle of a track, drawn once per archive and shared by all its images. See [FORMAT § Centerline](FORMAT.md#centerline).
 
+**Click**:
+A point a person marked on the middle of a track, stored with the centerline as an editor's input. Readers other than the editor ignore it. See [FORMAT § Centerline](FORMAT.md#centerline).
+
 **Scale**:
 The modelling scale of a layout (HO, N, Z, ...), which fixes its ratio to the prototype. See [FORMAT § Scales and gauge](FORMAT.md#scales-and-gauge).
 

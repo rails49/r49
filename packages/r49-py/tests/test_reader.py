@@ -88,6 +88,22 @@ class TestLoad:
             r49.CenterlineNode(x=0, y=1, heading=-3),
         ]
         assert layout.centerlines == [r49.Centerline(nodes=nodes)]
+        assert layout.centerlines[0].clicks == []
+
+    def test_reads_centerline_clicks_in_order(self) -> None:
+        nodes = [{"x": 0, "y": 0, "heading": 0}, {"x": 9, "y": 0, "heading": 0}]
+        clicks = [{"x": 0, "y": 0}, {"x": 9, "y": 0.5}, {"x": 4, "y": -0.5}]
+        data = {
+            "version": 4,
+            "layout": {"scale": "HO", "centerlines": [{"nodes": nodes, "clicks": clicks}]},
+            "camera": {"resolution": {"width": 4, "height": 3}},
+        }
+        layout = r49.parse_manifest(json.dumps(data).encode()).layout
+        assert layout.centerlines[0].clicks == [
+            r49.Point(x=0, y=0),
+            r49.Point(x=9, y=0.5),
+            r49.Point(x=4, y=-0.5),
+        ]
 
     def test_names_the_rule_when_refusing(self) -> None:
         with pytest.raises(r49.R49Error) as refused:

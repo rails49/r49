@@ -1,0 +1,5 @@
+{
+  "description": "A centerline click with no y.",
+  "result": "reject",
+  "rule": "manifest/schema"
+}

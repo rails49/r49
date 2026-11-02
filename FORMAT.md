@@ -51,7 +51,10 @@ shares them.
     },
     "sensors": [ { "id": "…", "x": 0, "y": 0, "name": "…" } ],  // optional, reads as []; name optional
     "centerlines": [                                      // optional, reads as []
-      { "nodes": [ { "x": 0, "y": 0, "heading": 0 }, { "x": 100, "y": 0, "heading": 0 } ] }
+      {
+        "nodes": [ { "x": 0, "y": 0, "heading": 0 }, { "x": 100, "y": 0, "heading": 0 } ],
+        "clicks": [ { "x": 0, "y": 0 }, { "x": 100, "y": 0 } ]  // optional, reads as []
+      }
     ]
   },
   "camera": { "resolution": { "width": 1920, "height": 1080 }, "model": "…" },  // model optional
@@ -131,6 +134,13 @@ A reference point has no `id` and no name. Nothing refers to a single point.
 | Field | Type | Meaning |
 | :--- | :--- | :--- |
 | `nodes` | array of node, at least two | The line's nodes, in order. Two consecutive nodes are never at the same position, so every segment has a length. Nodes may lie outside the frame, as a span's ends may. |
+| `clicks` | array of `{ x, y }`, numbers, optional | The points a person marked on the middle of the track in an editor, in track order. Absent reads as `[]`. |
+
+The nodes are the line's geometry, and every reader uses them. The clicks are
+the editor's input, kept so that a later session can edit the line; every other
+reader ignores them. The format does not promise that the nodes are a function
+of the clicks: an editor may fit nodes to clicks in any way, change how it fits
+them, or store a line with no clicks at all.
 
 A centerline has no `id` and no name. Nothing refers to a single centerline.
 Centerlines do not branch: a turnout or a crossing is not traced.

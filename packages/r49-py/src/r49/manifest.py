@@ -135,6 +135,8 @@ class Centerline(_Strict):
     """The line along the middle of a track, as nodes in order."""
 
     nodes: list[CenterlineNode] = Field(min_length=2)
+    clicks: list[Point] = []
+    """The editor's input, in track order; other readers ignore it."""
 
     @field_validator("nodes")
     @classmethod

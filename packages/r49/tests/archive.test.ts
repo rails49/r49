@@ -146,7 +146,7 @@ describe('R49Archive', () => {
       expect(getDPTResidual(loaded.getManifest())).toBeGreaterThan(0);
     });
 
-    it('preserves centerlines, and writes none where there were none', async () => {
+    it('preserves centerlines and their clicks, and writes none where there were none', async () => {
       const centerlines = [
         {
           nodes: [
@@ -154,6 +154,7 @@ describe('R49Archive', () => {
             { x: 960.5, y: 500, heading: 0 },
             { x: 1920, y: 540, heading: 0.0416 },
           ],
+          clicks: [{ x: 0, y: 540 }, { x: 1920, y: 540 }, { x: 960.5, y: 501 }],
         },
         { nodes: [{ x: -40, y: 900, heading: 0.0976 }, { x: 2000, y: 1100, heading: 0.0976 }] },
       ];
@@ -161,6 +162,7 @@ describe('R49Archive', () => {
         layout: { scale: 'HO', calibration: { points: [] }, sensors: [], centerlines },
       }));
       expect(traced.getManifest().layout.centerlines).toEqual(centerlines);
+      expect('clicks' in traced.getManifest().layout.centerlines![1]).toBe(false);
 
       const untraced = await roundTrip(manifest());
       expect('centerlines' in untraced.getManifest().layout).toBe(false);
