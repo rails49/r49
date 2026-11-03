@@ -50,12 +50,20 @@ _Avoid_: copy, repeat
 A point on the layout where occupancy must be reported. See [FORMAT § Sensor](FORMAT.md#sensor).
 _Avoid_: detector, block, marker
 
+**Scale**:
+The modelling scale of a layout (HO, N, Z, ...), which fixes its ratio to the prototype. See [FORMAT § Scales and gauge](FORMAT.md#scales-and-gauge).
+
+**Prototype**:
+The real railway a model represents. See [FORMAT § Scales and gauge](FORMAT.md#scales-and-gauge).
+
+### Tracks
+
 **Track**:
-The line along the middle of one of the layout's tracks, stored as nodes, drawn once per archive and shared by all its images. See [FORMAT § Track](FORMAT.md#track).
+The stored line along the middle of a pair of rails on the layout, as nodes, drawn once per archive and shared by all its images. See [FORMAT § Track](FORMAT.md#track).
 _Avoid_: centerline, for the stored line
 
 **Centerline**:
-The middle line of a track as an editor draws it. The stored line is a track.
+The line along the middle of a pair of rails as an editor draws it, before it is stored.
 
 **Click**:
 A point a person marked on the middle of a track, stored with the track as an editor's input. Readers other than the editor ignore it. See [FORMAT § Click](FORMAT.md#click).
@@ -64,13 +72,10 @@ A point a person marked on the middle of a track, stored with the track as an ed
 The line between two neighbouring clicks of a track. See [FORMAT § Click](FORMAT.md#click).
 
 **Straight gap**:
-A gap the person marked straight, by `straight` on the click that starts it. Every other gap is a **free gap**. See [FORMAT § Click](FORMAT.md#click).
+A gap the person marked straight, by `straight` on the click that starts it. See [FORMAT § Click](FORMAT.md#click).
 
-**Scale**:
-The modelling scale of a layout (HO, N, Z, ...), which fixes its ratio to the prototype. See [FORMAT § Scales and gauge](FORMAT.md#scales-and-gauge).
-
-**Prototype**:
-The real railway a model represents. See [FORMAT § Scales and gauge](FORMAT.md#scales-and-gauge).
+**Free gap**:
+A gap not marked straight. See [FORMAT § Click](FORMAT.md#click).
 
 ### Calibration
 

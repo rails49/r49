@@ -31,8 +31,8 @@ describe('segment', () => {
     for (const turn of [0.1, 0.5, 1, Math.PI / 4, Math.PI / 2]) {
       const end = (a: number) => ({ x: 100 * Math.cos(a), y: 100 * Math.sin(a), heading: a + Math.PI / 2 });
       const s = segment(end(-turn / 2), end(turn / 2));
-      for (let t = 0; t <= 1; t += 0.01) {
-        const p = pointAt(s, t);
+      for (let k = 0; k <= 100; k++) {
+        const p = pointAt(s, k / 100);
         expect(Math.abs(Math.hypot(p.x, p.y) - 100)).toBeLessThan(0.03);
       }
     }

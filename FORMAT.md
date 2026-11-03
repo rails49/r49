@@ -152,8 +152,8 @@ Tracks do not branch: a turnout or a crossing is not traced.
 | `x`, `y` | numbers | Where the person clicked, in image pixels. |
 | `straight` | boolean, optional | The gap from this click to the next one, in stored order, is straight. Absent reads as `false`: the gap is free. The last click of a track starts no gap and may not be `true`. |
 
-A gap is the line between two neighbouring clicks. Like the clicks, the marks
-are the editor's input, and every other reader ignores them.
+A gap is the line between two neighbouring clicks. Like the clicks, the
+`straight` flags are the editor's input, and every other reader ignores them.
 
 ### Node
 
@@ -183,8 +183,9 @@ about the chord give a curve within 0.03 % of the radius of the circular arc
 through A and B, for turns up to 90°.
 
 `@rails49/r49` computes this curve as `segment`, `pointAt` and `headingAt`,
-and the nearest point on a set of tracks as `nearestOnTrack`; `rails49-r49`
-names them `segment`, `point_at`, `heading_at` and `nearest_on_track`.
+the nearest point on a set of tracks as `nearestOnTrack`, and an angle brought
+into (−π, π] as `wrapAngle`; `rails49-r49` names them `segment`, `point_at`,
+`heading_at`, `nearest_on_track` and `wrap_angle`.
 
 ### `camera`
 

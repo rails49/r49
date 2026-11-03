@@ -141,7 +141,7 @@ class Click(_Strict):
 
 
 class Track(_Strict):
-    """The line along the middle of a track, as nodes in order."""
+    """The stored line along the middle of a pair of rails, as nodes in order."""
 
     nodes: list[TrackNode] = Field(min_length=2)
     clicks: list[Click] = []

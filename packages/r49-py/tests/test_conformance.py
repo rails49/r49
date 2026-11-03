@@ -85,7 +85,7 @@ def disagreements(expected: dict[str, Any], outcome: Outcome) -> list[str]:
     return found
 
 
-def track_disagreements(tracks: list[r49.Track], expected: dict[str, Any]) -> list[str]:
+def track_disagreements(expected: dict[str, Any], tracks: list[r49.Track]) -> list[str]:
     """Where this package's curve through ``tracks`` disagrees with a track
     case's ``expected``, one line each. Each coordinate and distance must be
     within ``tolerance``; each heading must be in (−π, π] and within
@@ -154,7 +154,7 @@ def test_case(case: Path) -> None:
 
 @pytest.mark.parametrize("case", TRACK, ids=[path.name for path in TRACK])
 def test_track_case(case: Path) -> None:
-    assert track_disagreements(tracks_of(case), expected_of(case)) == []
+    assert track_disagreements(expected_of(case), tracks_of(case)) == []
 
 
 REJECTED = {expected_of(c)["rule"] for c in VERDICT if expected_of(c)["result"] == "reject"}

@@ -24,7 +24,7 @@ export interface NearestPoint {
 
 /**
  * `angle`, in radians, brought into (−π, π]. Any finite number goes in;
- * angles that differ by a multiple of 2π come out the same.
+ * angles that differ by a multiple of 2π come out the same. FORMAT.md § Node.
  */
 export function wrapAngle(angle: number): number {
   const wrapped = angle - 2 * Math.PI * Math.floor((angle + Math.PI) / (2 * Math.PI));
@@ -73,7 +73,7 @@ export function headingAt(s: Segment, t: number): number {
  * The point on `tracks` nearest `at`, at any distance, or null when there are
  * no tracks. Each segment is sampled every couple of image pixels, and the
  * nearest sample refined between its neighbours to where the distance stops
- * falling.
+ * falling. FORMAT.md § Node.
  */
 export function nearestOnTrack(tracks: readonly Track[], at: Point): NearestPoint | null {
   const offset = (s: Segment, t: number) => {

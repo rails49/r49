@@ -40,7 +40,7 @@ class NearestPoint:
 
 def wrap_angle(angle: float) -> float:
     """``angle``, in radians, brought into (−π, π]. Any finite number goes in;
-    angles that differ by a multiple of 2π come out the same."""
+    angles that differ by a multiple of 2π come out the same. FORMAT.md § Node."""
     wrapped = angle - 2 * math.pi * math.floor((angle + math.pi) / (2 * math.pi))
     return math.pi if wrapped == -math.pi else wrapped
 
@@ -77,7 +77,7 @@ def nearest_on_track(tracks: Sequence[Track], at: Point) -> NearestPoint | None:
     """The point on ``tracks`` nearest ``at``, at any distance, or None when
     there are no tracks. Each segment is sampled every couple of image pixels,
     and the nearest sample refined between its neighbours to where the distance
-    stops falling."""
+    stops falling. FORMAT.md § Node."""
 
     def offset(s: Segment, t: float) -> tuple[float, float]:
         x, y = _point(s, t)

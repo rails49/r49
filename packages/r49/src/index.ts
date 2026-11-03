@@ -81,8 +81,7 @@ export {
 
 //── Track curve ──────────────────────────────────────────────────────────────
 // The line between a track's nodes, as FORMAT.md § Node defines it, and the
-// point on a set of tracks nearest a given one. Every reader that needs the
-// line between nodes calls these rather than reimplementing the Bézier.
+// point on a set of tracks nearest a given one.
 export {
   segment,
   pointAt,

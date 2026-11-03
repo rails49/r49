@@ -19,7 +19,7 @@ describe('conformance cases', () => {
   for (const c of cases) {
     it(c.name, async () => {
       if (c.input.kind === 'track') {
-        expect(trackDisagreements(c.input.tracks, c.expected as TrackExpected)).toEqual([]);
+        expect(trackDisagreements(c.expected as TrackExpected, c.input.tracks)).toEqual([]);
       } else {
         expect(disagreements(c.expected as ArchiveExpected, await judge(c.input))).toEqual([]);
       }

@@ -189,7 +189,7 @@ function sortedMismatches(mismatches: readonly ImageMismatch[]): string {
  * distance must be within `tolerance`; each heading must be in (−π, π] and
  * within `tolerance` of the expected direction, modulo 2π.
  */
-export function trackDisagreements(tracks: readonly Track[], expected: TrackExpected): string[] {
+export function trackDisagreements(expected: TrackExpected, tracks: readonly Track[]): string[] {
   const found: string[] = [];
   const near = (what: string, got: number, want: number) => {
     if (!(Math.abs(got - want) <= expected.tolerance)) found.push(`${what}: expected ${want} ± ${expected.tolerance}, got ${got}`);
