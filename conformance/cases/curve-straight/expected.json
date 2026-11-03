@@ -1,0 +1,63 @@
+{
+  "description": "Both headings along the chord give a straight, traversed at constant speed: on the segment from (x0, y0) to (x0 + 300, y0 + 400) the point at t is (x0 + 300 t, y0 + 400 t), and the heading everywhere is atan2(4, 3).",
+  "points": [
+    {
+      "track": 0,
+      "segment": 0,
+      "t": 0,
+      "x": 0,
+      "y": 0,
+      "heading": 0.9272952180016122
+    },
+    {
+      "track": 0,
+      "segment": 0,
+      "t": 0.25,
+      "x": 75,
+      "y": 100,
+      "heading": 0.9272952180016122
+    },
+    {
+      "track": 0,
+      "segment": 0,
+      "t": 0.5,
+      "x": 150,
+      "y": 200,
+      "heading": 0.9272952180016122
+    },
+    {
+      "track": 0,
+      "segment": 0,
+      "t": 1,
+      "x": 300,
+      "y": 400,
+      "heading": 0.9272952180016122
+    },
+    {
+      "track": 0,
+      "segment": 1,
+      "t": 0,
+      "x": 300,
+      "y": 400,
+      "heading": 0.9272952180016122
+    },
+    {
+      "track": 0,
+      "segment": 1,
+      "t": 0.5,
+      "x": 450,
+      "y": 600,
+      "heading": 0.9272952180016122
+    },
+    {
+      "track": 0,
+      "segment": 1,
+      "t": 1,
+      "x": 600,
+      "y": 800,
+      "heading": 0.9272952180016122
+    }
+  ],
+  "nearest": [],
+  "tolerance": 1e-09
+}

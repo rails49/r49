@@ -3,7 +3,8 @@ import { expect } from '../../../scripts/test/expect.ts';
 import { fileURLToPath } from 'node:url';
 import { FORMAT_RULES, R49Archive, getDPT, getDPTResidual } from './r49.ts';
 import type { ManifestData } from '../src/index.ts';
-import { disagreements, judge, judgeArchive, readCases } from './conformance.ts';
+import type { ArchiveExpected, TrackExpected } from './conformance.ts';
+import { disagreements, judge, judgeArchive, readCases, trackDisagreements } from './conformance.ts';
 
 /**
  * Every case in `conformance/cases/`, run through this package. Cases assert
@@ -17,13 +18,18 @@ const cases = readCases(CASES);
 describe('conformance cases', () => {
   for (const c of cases) {
     it(c.name, async () => {
-      expect(disagreements(c.expected, await judge(c.input))).toEqual([]);
+      if (c.input.kind === 'track') {
+        expect(trackDisagreements(c.expected as TrackExpected, c.input.tracks)).toEqual([]);
+      } else {
+        expect(disagreements(c.expected as ArchiveExpected, await judge(c.input))).toEqual([]);
+      }
     });
   }
 
-  const rejected = new Set(cases.flatMap(c => (c.expected.result === 'reject' ? [c.expected.rule] : [])));
+  const verdicts = cases.flatMap(c => (c.input.kind === 'track' ? [] : [c.expected as ArchiveExpected]));
+  const rejected = new Set(verdicts.flatMap(e => (e.result === 'reject' ? [e.rule] : [])));
   const reported = new Set<string>(
-    cases.flatMap(c => (c.expected.result === 'accept' ? (c.expected.image_mismatches ?? []) : [])).map(m => m.rule),
+    verdicts.flatMap(e => (e.result === 'accept' ? (e.image_mismatches ?? []) : [])).map(m => m.rule),
   );
   const imageRules: string[] = FORMAT_RULES.filter(rule => rule.startsWith('images/'));
 

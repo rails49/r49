@@ -37,8 +37,8 @@ export {
 // Three geometries, differing in scope and in whether a model ever sees them:
 // a CarLabel is the two ends of a car's visible part along its centerline,
 // per image, trained on, and carries provenance; a Sensor is a single query
-// point, per layout, never trained on, and carries none; a Centerline is the
-// line along the middle of a track, per layout, and carries none.
+// point, per layout, never trained on, and carries none; a Track is the line
+// along the middle of one of the layout's tracks, per layout, and carries none.
 export type {
   ManifestData,
   Layout,
@@ -47,7 +47,9 @@ export type {
   CarLabel,
   Provenance,
   Sensor,
-  Centerline,
+  Track,
+  TrackNode,
+  Click,
   Calibration,
   ReferencePoint,
   Point,
@@ -76,6 +78,19 @@ export {
   type LeftOutReason,
   type ValidScales,
 } from './manifest.schema.ts';
+
+//── Track curve ──────────────────────────────────────────────────────────────
+// The line between a track's nodes, as FORMAT.md § Node defines it, and the
+// point on a set of tracks nearest a given one.
+export {
+  segment,
+  pointAt,
+  headingAt,
+  nearestOnTrack,
+  wrapAngle,
+  type Segment,
+  type NearestPoint,
+} from './curve.ts';
 
 //── Identity ─────────────────────────────────────────────────────────────────
 // Time-ordered, collision-resistant 11-character identifiers. Archive, label

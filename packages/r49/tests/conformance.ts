@@ -1,8 +1,18 @@
 import { readdirSync, readFileSync, existsSync } from 'node:fs';
 import { join } from 'node:path';
 import JSZip from 'jszip';
-import type { ImageMismatch } from '../src/index.ts';
-import { R49Archive, R49Error, getDPT, getDPTResidual } from './r49.ts';
+import type { ImageMismatch, Point, Track } from '../src/index.ts';
+import {
+  R49Archive,
+  R49Error,
+  getDPT,
+  getDPTResidual,
+  headingAt,
+  nearestOnTrack,
+  pointAt,
+  segment,
+  wrapAngle,
+} from './r49.ts';
 
 /**
  * The TypeScript conformance runner: reads a case from `conformance/cases/`,
@@ -12,7 +22,10 @@ import { R49Archive, R49Error, getDPT, getDPTResidual } from './r49.ts';
  */
 
 /** A case's `expected.json`. */
-export type Expected = { description?: string } & (
+export type Expected = ArchiveExpected | TrackExpected;
+
+/** The `expected.json` of a case whose input is an archive or a manifest. */
+export type ArchiveExpected = { description?: string } & (
   | {
       result: 'accept';
       dpt?: number | null;
@@ -23,17 +36,25 @@ export type Expected = { description?: string } & (
   | { result: 'reject'; rule: string }
 );
 
+/** The `expected.json` of a case whose input is `track.json`. */
+export interface TrackExpected {
+  description?: string;
+  points: { track: number; segment: number; t: number; x: number; y: number; heading: number }[];
+  nearest: { at: Point; track: number; x: number; y: number; heading: number; distance: number }[];
+  tolerance: number;
+}
+
 /** What this package made of a case's input. */
 export type Outcome =
   | { result: 'accept'; dpt: number | null; residual: number | null; imageMismatches: ImageMismatch[] }
   | { result: 'reject'; rule: string };
 
 /** One case, read from its directory. */
-export interface Case {
-  name: string;
-  input: { kind: 'archive' | 'manifest'; bytes: Uint8Array };
-  expected: Expected;
-}
+export type Case =
+  | { name: string; input: { kind: 'archive' | 'manifest'; bytes: Uint8Array }; expected: ArchiveExpected }
+  | { name: string; input: { kind: 'track'; tracks: Track[] }; expected: TrackExpected };
+
+type InputKind = Case['input']['kind'];
 
 /** Every case under `root`, in name order. */
 export function readCases(root: string): Case[] {
@@ -47,24 +68,28 @@ export function readCases(root: string): Case[] {
 /** @throws If the directory does not hold exactly one input and an `expected.json`. */
 export function readCase(root: string, name: string): Case {
   const dir = join(root, name);
-  const inputs = (['archive', 'manifest'] as const).filter(kind => existsSync(join(dir, inputFile(kind))));
+  const inputs = (['archive', 'manifest', 'track'] as const).filter(kind => existsSync(join(dir, INPUT_FILE[kind])));
   if (inputs.length !== 1) {
-    throw new Error(`case ${name}: holds ${inputs.length} of archive.r49 and manifest.json, not exactly one`);
+    throw new Error(`case ${name}: holds ${inputs.length} of archive.r49, manifest.json and track.json, not exactly one`);
   }
   const kind = inputs[0];
-  return {
-    name,
-    input: { kind, bytes: new Uint8Array(readFileSync(join(dir, inputFile(kind)))) },
-    expected: JSON.parse(readFileSync(join(dir, 'expected.json'), 'utf8')) as Expected,
-  };
+  const bytes = new Uint8Array(readFileSync(join(dir, INPUT_FILE[kind])));
+  const expected: unknown = JSON.parse(readFileSync(join(dir, 'expected.json'), 'utf8'));
+  if (kind === 'track') {
+    const { tracks } = JSON.parse(new TextDecoder().decode(bytes)) as { tracks: Track[] };
+    return { name, input: { kind, tracks }, expected: expected as TrackExpected };
+  }
+  return { name, input: { kind, bytes }, expected: expected as ArchiveExpected };
 }
 
-function inputFile(kind: 'archive' | 'manifest'): string {
-  return kind === 'archive' ? 'archive.r49' : 'manifest.json';
-}
+const INPUT_FILE: Record<InputKind, string> = {
+  archive: 'archive.r49',
+  manifest: 'manifest.json',
+  track: 'track.json',
+};
 
-/** Run a case's input through the package. */
-export async function judge(input: Case['input']): Promise<Outcome> {
+/** Run an archive or manifest case's input through the package. */
+export async function judge(input: { kind: 'archive' | 'manifest'; bytes: Uint8Array }): Promise<Outcome> {
   const bytes = input.kind === 'archive' ? input.bytes : await wrapManifest(input.bytes);
   return await judgeArchive(bytes);
 }
@@ -123,7 +148,7 @@ function namedImages(bytes: Uint8Array): string[] {
  * must be `null`; a number must be within `tolerance` of the outcome. The image
  * mismatches must be `image_mismatches`, in any order; absent, there are none.
  */
-export function disagreements(expected: Expected, outcome: Outcome): string[] {
+export function disagreements(expected: ArchiveExpected, outcome: Outcome): string[] {
   if (expected.result !== outcome.result) {
     const got = outcome.result === 'reject' ? `reject (${outcome.rule})` : 'accept';
     return [`expected ${expected.result}, got ${got}`];
@@ -156,4 +181,46 @@ export function disagreements(expected: Expected, outcome: Outcome): string[] {
 
 function sortedMismatches(mismatches: readonly ImageMismatch[]): string {
   return JSON.stringify(mismatches.map(m => `${m.rule} ${m.filename}`).sort());
+}
+
+/**
+ * Where this package's curve through `tracks` disagrees with a track case's
+ * `expected`, one line each; empty when it agrees. Each coordinate and
+ * distance must be within `tolerance`; each heading must be in (−π, π] and
+ * within `tolerance` of the expected direction, modulo 2π.
+ */
+export function trackDisagreements(expected: TrackExpected, tracks: readonly Track[]): string[] {
+  const found: string[] = [];
+  const near = (what: string, got: number, want: number) => {
+    if (!(Math.abs(got - want) <= expected.tolerance)) found.push(`${what}: expected ${want} ± ${expected.tolerance}, got ${got}`);
+  };
+  const heading = (what: string, got: number, want: number) => {
+    if (!(got > -Math.PI && got <= Math.PI)) found.push(`${what}: heading ${got} is outside (−π, π]`);
+    else if (!(Math.abs(wrapAngle(got - want)) <= expected.tolerance)) {
+      found.push(`${what}: expected heading ${want} ± ${expected.tolerance}, got ${got}`);
+    }
+  };
+  for (const p of expected.points) {
+    const what = `track ${p.track} segment ${p.segment} t ${p.t}`;
+    const nodes = tracks[p.track].nodes;
+    const s = segment(nodes[p.segment], nodes[p.segment + 1]);
+    const at = pointAt(s, p.t);
+    near(`${what} x`, at.x, p.x);
+    near(`${what} y`, at.y, p.y);
+    heading(what, headingAt(s, p.t), p.heading);
+  }
+  for (const n of expected.nearest) {
+    const what = `nearest (${n.at.x}, ${n.at.y})`;
+    const got = nearestOnTrack(tracks, n.at);
+    if (got === null) {
+      found.push(`${what}: expected a point, got null`);
+      continue;
+    }
+    if (got.track !== n.track) found.push(`${what}: expected track ${n.track}, got ${got.track}`);
+    near(`${what} x`, got.point.x, n.x);
+    near(`${what} y`, got.point.y, n.y);
+    near(`${what} distance`, got.distance, n.distance);
+    heading(what, got.heading, n.heading);
+  }
+  return found;
 }

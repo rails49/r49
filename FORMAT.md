@@ -50,8 +50,11 @@ shares them.
       "reference_height_mm": 85                           // optional, reads as 0
     },
     "sensors": [ { "id": "…", "x": 0, "y": 0, "name": "…" } ],  // optional, reads as []; name optional
-    "centerlines": [                                      // optional, reads as []
-      { "points": [ { "x": 0, "y": 0 }, { "x": 100, "y": 0 } ] }
+    "tracks": [                                           // optional, reads as []
+      {
+        "nodes": [ { "x": 0, "y": 0, "heading": 0 }, { "x": 100, "y": 0, "heading": 0 } ],
+        "clicks": [ { "x": 0, "y": 0, "straight": true }, { "x": 100, "y": 0 } ]  // optional, reads as []; straight optional
+      }
     ]
   },
   "camera": { "resolution": { "width": 1920, "height": 1080 }, "model": "…" },  // model optional
@@ -99,7 +102,7 @@ corpus requires one; see [Corpus rules](#corpus-rules).
 | `scale` | a scale name from [Scales and gauge](#scales-and-gauge) | The modelling scale. Required, with no default: DPT depends on it. |
 | `calibration` | object | The reference points that fix DPT. |
 | `sensors` | array of sensor | Points on the layout where occupancy must be reported. They describe where an answer is wanted, not what is in any image, and are never training data. |
-| `centerlines` | array of centerline | The lines along the middle of the layout's tracks, drawn once and shared by every image. |
+| `tracks` | array of track | The layout's tracks, each a line along its middle, drawn once and shared by every image. |
 
 ### `layout.calibration`
 
@@ -126,14 +129,63 @@ A reference point has no `id` and no name. Nothing refers to a single point.
 | `x`, `y` | numbers | The sensor's image position. |
 | `name` | string, optional | Free text, not unique. |
 
-### Centerline
+### Track
 
 | Field | Type | Meaning |
 | :--- | :--- | :--- |
-| `points` | array of `{ x, y }`, numbers, at least two | The line's image positions, in order. Two consecutive points never coincide, so every segment has a direction. Points may lie outside the frame, as a span's may. |
+| `nodes` | array of node, at least two | The line's nodes, in order. Two consecutive nodes are never at the same position, so every segment has a length. Nodes may lie outside the frame, as a span's ends may. |
+| `clicks` | array of click, optional | The points a person marked on the middle of the track in an editor, in track order. Absent reads as `[]`. |
 
-A centerline has no `id` and no name. Nothing refers to a single centerline.
-Centerlines do not branch: a turnout or a crossing is not traced.
+The nodes are the line's geometry, and every reader uses them. The clicks are
+the editor's input, kept so that a later session can edit the line; every other
+reader ignores them. The format does not promise that the nodes are a function
+of the clicks: an editor may fit nodes to clicks in any way, change how it fits
+them, or store a line with no clicks at all.
+
+A track has no `id` and no name. Nothing refers to a single track.
+Tracks do not branch: a turnout or a crossing is not traced.
+
+### Click
+
+| Field | Type | Meaning |
+| :--- | :--- | :--- |
+| `x`, `y` | numbers | Where the person clicked, in image pixels. |
+| `straight` | boolean, optional | The gap from this click to the next one, in stored order, is straight. Absent reads as `false`: the gap is free. The last click of a track starts no gap and may not be `true`. |
+
+A gap is the line between two neighbouring clicks. Like the clicks, the
+`straight` flags are the editor's input, and every other reader ignores them.
+
+### Node
+
+| Field | Type | Meaning |
+| :--- | :--- | :--- |
+| `x`, `y` | numbers | The node's image position. |
+| `heading` | number | The direction the track runs at the node, in radians: `atan2(dy, dx)` in image pixels, pointing from this node towards the next. Any finite number; headings that differ by a multiple of 2π are the same direction. |
+
+Between two consecutive nodes A and B the track is the cubic Bézier curve
+from A to B with control points
+
+```text
+A + h · (cos θA, sin θA)
+B − h · (cos θB, sin θB)
+```
+
+where θA and θB are the two headings, `d` is the distance from A to B, `φ` is
+θB − θA brought into (−π, π], and
+
+```text
+h = d / (3 · cos²(φ / 4))
+```
+
+Two segments that meet at a node share its heading, so a track has no
+kink. Both headings along the chord give a straight segment. Headings symmetric
+about the chord give a curve within 0.03 % of the radius of the circular arc
+through A and B, for turns up to 90°.
+
+`@rails49/r49` computes this curve as `segment`, `pointAt` and `headingAt`,
+the nearest point on a set of tracks as `nearestOnTrack`, and an angle brought
+into (−π, π] as `wrapAngle`; `rails49-r49` names them `segment`, `point_at`,
+`heading_at`, `nearest_on_track` and `wrap_angle`.
 
 ### `camera`
 
@@ -222,7 +274,7 @@ more than one rule, which one is reported is not specified.
 | `manifest/unknown-key` | an object holds a key this document does not define. |
 | `manifest/duplicate-id` | two sensors, or two labels in one image, share an `id`. |
 | `manifest/provenance` | a label's `provenance` is missing or not one of the three, or `proposed_by` is present on `human`, or missing or empty on `proposed` or `corrected`. |
-| `manifest/schema` | any other field is missing, has the wrong type or is out of range: no `scale`, an unknown scale name, an empty `id`, a `camera_height_mm` of 0 or below, a non-integer resolution, a centerline of one point or with two consecutive points that coincide, a number too large to be finite such as `1e999`. |
+| `manifest/schema` | any other field is missing, has the wrong type or is out of range: no `scale`, an unknown scale name, an empty `id`, a `camera_height_mm` of 0 or below, a non-integer resolution, a track of one node or with two consecutive nodes at one position, a node with no `heading`, a track whose last click is `straight`, a number too large to be finite such as `1e999`. |
 
 Two rules are about the images, and a reader reports them instead of refusing
 the archive. It loads the archive and lists each disagreement, by its file name,

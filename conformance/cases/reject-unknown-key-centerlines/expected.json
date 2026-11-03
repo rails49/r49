@@ -1,0 +1,5 @@
+{
+  "description": "A layout holding centerlines, the key tracks had before it was named: refused, not read.",
+  "result": "reject",
+  "rule": "manifest/unknown-key"
+}
