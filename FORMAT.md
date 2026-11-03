@@ -182,6 +182,10 @@ kink. Both headings along the chord give a straight segment. Headings symmetric
 about the chord give a curve within 0.03 % of the radius of the circular arc
 through A and B, for turns up to 90°.
 
+`@rails49/r49` computes this curve as `segment`, `pointAt` and `headingAt`,
+and the nearest point on a set of tracks as `nearestOnTrack`; `rails49-r49`
+names them `segment`, `point_at`, `heading_at` and `nearest_on_track`.
+
 ### `camera`
 
 | Field | Type | Meaning |

@@ -15,6 +15,15 @@ from .calibration_fit import (
     LeftOutReason,
     calibration_fit,
 )
+from .curve import (
+    NearestPoint,
+    Segment,
+    heading_at,
+    nearest_on_track,
+    point_at,
+    segment,
+    wrap_angle,
+)
 from .errors import FORMAT_RULES, FormatRule, ImageMismatch, R49Error
 from .manifest import (
     MANIFEST_VERSION,
@@ -61,6 +70,7 @@ __all__ = [
     "LeftOutPoint",
     "LeftOutReason",
     "Manifest",
+    "NearestPoint",
     "Point",
     "Provenance",
     "R49Archive",
@@ -68,15 +78,21 @@ __all__ = [
     "ReferencePoint",
     "Resolution",
     "Scale",
+    "Segment",
     "Sensor",
     "Track",
     "TrackNode",
     "VocabularyNode",
     "WorldPoint",
     "calibration_fit",
+    "heading_at",
     "is_known_class",
     "is_segment_prefix",
     "load",
+    "nearest_on_track",
     "parse_manifest",
+    "point_at",
+    "segment",
     "vocabulary_subtypes",
+    "wrap_angle",
 ]

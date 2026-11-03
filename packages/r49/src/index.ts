@@ -79,6 +79,20 @@ export {
   type ValidScales,
 } from './manifest.schema.ts';
 
+//── Track curve ──────────────────────────────────────────────────────────────
+// The line between a track's nodes, as FORMAT.md § Node defines it, and the
+// point on a set of tracks nearest a given one. Every reader that needs the
+// line between nodes calls these rather than reimplementing the Bézier.
+export {
+  segment,
+  pointAt,
+  headingAt,
+  nearestOnTrack,
+  wrapAngle,
+  type Segment,
+  type NearestPoint,
+} from './curve.ts';
+
 //── Identity ─────────────────────────────────────────────────────────────────
 // Time-ordered, collision-resistant 11-character identifiers. Archive, label
 // and sensor ids are all minted with it, so it lives with the format whose

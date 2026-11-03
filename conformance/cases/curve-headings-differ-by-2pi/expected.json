@@ -1,0 +1,63 @@
+{
+  "description": "Node headings are any finite number, and the turn φ is brought into (−π, π]. Track 0 is curve-arc's quarter circle with its end heading written −3π/2 instead of π/2, and gives the same points. Track 1 runs left along y = 0 with headings π and −π: φ is 0, so it is a straight, (300 − 300 t, 0), heading π.",
+  "points": [
+    {
+      "track": 0,
+      "segment": 0,
+      "t": 0,
+      "x": 0,
+      "y": 0,
+      "heading": 0
+    },
+    {
+      "track": 0,
+      "segment": 0,
+      "t": 0.25,
+      "x": 38.9245128834866,
+      "y": 7.858495705504465,
+      "heading": 0.400145156484776
+    },
+    {
+      "track": 0,
+      "segment": 0,
+      "t": 0.5,
+      "x": 70.71067811865476,
+      "y": 29.289321881345245,
+      "heading": 0.7853981633974483
+    },
+    {
+      "track": 0,
+      "segment": 0,
+      "t": 1,
+      "x": 100,
+      "y": 100,
+      "heading": 1.5707963267948966
+    },
+    {
+      "track": 1,
+      "segment": 0,
+      "t": 0,
+      "x": 300,
+      "y": 0,
+      "heading": 3.141592653589793
+    },
+    {
+      "track": 1,
+      "segment": 0,
+      "t": 0.5,
+      "x": 150,
+      "y": 0,
+      "heading": 3.141592653589793
+    },
+    {
+      "track": 1,
+      "segment": 0,
+      "t": 1,
+      "x": 0,
+      "y": 0,
+      "heading": 3.141592653589793
+    }
+  ],
+  "nearest": [],
+  "tolerance": 1e-09
+}

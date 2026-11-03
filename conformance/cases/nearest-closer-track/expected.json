@@ -1,0 +1,29 @@
+{
+  "description": "Two parallel straights, y = 100 running right and y = 200 running left: the nearest point is on the closer one, with that track's heading.",
+  "points": [],
+  "nearest": [
+    {
+      "at": {
+        "x": 500,
+        "y": 160
+      },
+      "track": 1,
+      "x": 500,
+      "y": 200,
+      "heading": 3.141592653589793,
+      "distance": 40
+    },
+    {
+      "at": {
+        "x": 500,
+        "y": 140
+      },
+      "track": 0,
+      "x": 500,
+      "y": 100,
+      "heading": 0,
+      "distance": 40
+    }
+  ],
+  "tolerance": 1e-09
+}
