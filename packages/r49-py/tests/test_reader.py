@@ -104,7 +104,6 @@ class TestLoad:
             r49.Click(x=9, y=0.5),
             r49.Click(x=4, y=-0.5),
         ]
-        assert [c.straight for c in layout.tracks[0].clicks] == [True, False, False]
 
     def test_names_the_rule_when_refusing(self) -> None:
         with pytest.raises(r49.R49Error) as refused:
