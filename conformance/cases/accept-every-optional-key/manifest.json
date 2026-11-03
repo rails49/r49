@@ -38,7 +38,7 @@
         "name": "siding 3"
       }
     ],
-    "centerlines": [
+    "tracks": [
       {
         "nodes": [
           {
@@ -55,7 +55,8 @@
         "clicks": [
           {
             "x": 10,
-            "y": 20
+            "y": 20,
+            "straight": true
           },
           {
             "x": 55,

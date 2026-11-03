@@ -2,7 +2,7 @@
   "version": 4,
   "layout": {
     "scale": "HO",
-    "centerlines": [
+    "tracks": [
       {
         "nodes": [
           {
@@ -13,17 +13,17 @@
           {
             "x": 100,
             "y": 50,
-            "heading": 0.3218
-          }
-        ],
-        "clicks": [
-          {
-            "x": 10,
-            "y": 20
+            "heading": 0.1
           },
           {
-            "x": 1e999,
-            "y": 50
+            "x": 100,
+            "y": 50,
+            "heading": 0.1
+          },
+          {
+            "x": 200,
+            "y": 60,
+            "heading": 0.1
           }
         ]
       }

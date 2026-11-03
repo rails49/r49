@@ -122,8 +122,8 @@ class Sensor(_Strict):
     name: str | None = None
 
 
-class CenterlineNode(_Strict):
-    """A point on a centerline and the direction the track runs there."""
+class TrackNode(_Strict):
+    """A point on a track's line and the direction the track runs there."""
 
     x: float
     y: float
@@ -131,22 +131,41 @@ class CenterlineNode(_Strict):
     """Radians, atan2(dy, dx) in image pixels, pointing the way the nodes run."""
 
 
-class Centerline(_Strict):
+class Click(_Strict):
+    """A point a person marked on the middle of a track, in an editor."""
+
+    x: float
+    y: float
+    straight: bool = False
+    """The gap from this click to the next one is straight."""
+
+
+class Track(_Strict):
     """The line along the middle of a track, as nodes in order."""
 
-    nodes: list[CenterlineNode] = Field(min_length=2)
-    clicks: list[Point] = []
+    nodes: list[TrackNode] = Field(min_length=2)
+    clicks: list[Click] = []
     """The editor's input, in track order; other readers ignore it."""
 
     @field_validator("nodes")
     @classmethod
-    def _no_coincident_neighbours(cls, nodes: list[CenterlineNode]) -> list[CenterlineNode]:
+    def _no_coincident_neighbours(cls, nodes: list[TrackNode]) -> list[TrackNode]:
         if any((a.x, a.y) == (b.x, b.y) for a, b in pairwise(nodes)):
             raise PydanticCustomError(
                 "coincident_nodes",
-                "two consecutive centerline nodes coincide: every segment needs a length",
+                "two consecutive track nodes coincide: every segment needs a length",
             )
         return nodes
+
+    @field_validator("clicks")
+    @classmethod
+    def _no_straight_last_click(cls, clicks: list[Click]) -> list[Click]:
+        if clicks and clicks[-1].straight:
+            raise PydanticCustomError(
+                "straight_last_click",
+                "the last click is marked straight: no gap starts there",
+            )
+        return clicks
 
 
 Provenance = Literal["human", "proposed", "corrected"]
@@ -205,7 +224,7 @@ class Layout(_Strict):
     scale: Scale
     calibration: Calibration = Field(default_factory=Calibration)
     sensors: list[Sensor] = []
-    centerlines: list[Centerline] = []
+    tracks: list[Track] = []
 
     @field_validator("sensors")
     @classmethod

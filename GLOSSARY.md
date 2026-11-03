@@ -42,11 +42,21 @@ _Avoid_: frame (for a stored image; a frame is one picture from the live camera)
 A point on the layout where occupancy must be reported. See [FORMAT § Sensor](FORMAT.md#sensor).
 _Avoid_: detector, block, marker
 
+**Track**:
+The line along the middle of one of the layout's tracks, stored as nodes, drawn once per archive and shared by all its images. See [FORMAT § Track](FORMAT.md#track).
+_Avoid_: centerline, for the stored line
+
 **Centerline**:
-The line along the middle of a track, drawn once per archive and shared by all its images. See [FORMAT § Centerline](FORMAT.md#centerline).
+The middle line of a track as an editor draws it. The stored line is a track.
 
 **Click**:
-A point a person marked on the middle of a track, stored with the centerline as an editor's input. Readers other than the editor ignore it. See [FORMAT § Centerline](FORMAT.md#centerline).
+A point a person marked on the middle of a track, stored with the track as an editor's input. Readers other than the editor ignore it. See [FORMAT § Click](FORMAT.md#click).
+
+**Gap**:
+The line between two neighbouring clicks of a track. See [FORMAT § Click](FORMAT.md#click).
+
+**Straight gap**:
+A gap the person marked straight, by `straight` on the click that starts it. Every other gap is a **free gap**. See [FORMAT § Click](FORMAT.md#click).
 
 **Scale**:
 The modelling scale of a layout (HO, N, Z, ...), which fixes its ratio to the prototype. See [FORMAT § Scales and gauge](FORMAT.md#scales-and-gauge).

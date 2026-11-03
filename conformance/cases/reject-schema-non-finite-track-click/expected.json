@@ -1,5 +1,5 @@
 {
-  "description": "A centerline click at x 1e999.",
+  "description": "A track click at x 1e999.",
   "result": "reject",
   "rule": "manifest/schema"
 }

@@ -1,5 +1,0 @@
-{
-  "description": "A centerline node with no heading: refused, since the curve leaves every node along its heading.",
-  "result": "reject",
-  "rule": "manifest/schema"
-}

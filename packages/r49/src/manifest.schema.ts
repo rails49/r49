@@ -352,7 +352,7 @@ const SensorSchema = z
   })
   .strict();
 
-const CenterlineNodeSchema = z
+const TrackNodeSchema = z
   .object({
     x: finite(),
     y: finite(),
@@ -361,23 +361,41 @@ const CenterlineNodeSchema = z
   })
   .strict();
 
-function noCoincidentNeighbours(nodes: readonly CenterlineNode[]): boolean {
+function noCoincidentNeighbours(nodes: readonly TrackNode[]): boolean {
   return nodes.every((n, i) => i === 0 || n.x !== nodes[i - 1].x || n.y !== nodes[i - 1].y);
 }
 
-const CenterlineSchema = z
+const ClickSchema = z
+  .object({
+    x: finite(),
+    y: finite(),
+    /** The gap from this click to the next one is straight. Undefined reads as false. */
+    straight: z.boolean().optional(),
+  })
+  .strict();
+
+function noStraightLastClick(clicks: readonly Click[]): boolean {
+  return clicks.length === 0 || !clicks[clicks.length - 1].straight;
+}
+
+const TrackSchema = z
   .object({
     nodes: z
-      .array(CenterlineNodeSchema)
+      .array(TrackNodeSchema)
       .min(2)
       .refine(noCoincidentNeighbours, {
-        message: 'two consecutive centerline nodes coincide: every segment needs a length',
+        message: 'two consecutive track nodes coincide: every segment needs a length',
       }),
     /**
      * The editor's input, in track order; other readers ignore it. Undefined
      * when the archive has none, which FORMAT.md reads as [].
      */
-    clicks: z.array(PointSchema).optional(),
+    clicks: z
+      .array(ClickSchema)
+      .refine(noStraightLastClick, {
+        message: 'the last click is marked straight: no gap starts there',
+      })
+      .optional(),
   })
   .strict();
 
@@ -472,7 +490,7 @@ const LayoutSchema = z
     /** Per **layout**, not per image: placing one answers for every frame. */
     sensors: z.array(SensorSchema).refine(sensorIds.check, sensorIds.options).default([]),
     /** Undefined when the archive has none, which FORMAT.md reads as []. */
-    centerlines: z.array(CenterlineSchema).optional(),
+    tracks: z.array(TrackSchema).optional(),
   })
   .strict();
 
@@ -611,8 +629,9 @@ export type WorldPoint = z.infer<typeof WorldPointSchema>;
 export type ReferencePoint = z.infer<typeof ReferencePointSchema>;
 export type Calibration = z.infer<typeof CalibrationSchema>;
 export type Sensor = z.infer<typeof SensorSchema>;
-export type CenterlineNode = z.infer<typeof CenterlineNodeSchema>;
-export type Centerline = z.infer<typeof CenterlineSchema>;
+export type TrackNode = z.infer<typeof TrackNodeSchema>;
+export type Click = z.infer<typeof ClickSchema>;
+export type Track = z.infer<typeof TrackSchema>;
 export type CarLabel = z.infer<typeof CarLabelSchema>;
 export type Provenance = CarLabel['provenance'];
 export type Image = z.infer<typeof ImageSchema>;
