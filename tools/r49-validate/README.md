@@ -31,7 +31,7 @@ directory set to the package, so every relative path would resolve against
 `tools/r49-validate/`. Run the CLI from the repository root instead:
 
 ```bash
-node tools/r49-validate/dist/cli.js --author <handle> <path>...
+node tools/r49-validate/dist/cli.js --author <handle> --base origin/main <path>...
 node tools/r49-validate/dist/cli.js guidance --check CONTRIBUTING.md
 ```
 
@@ -79,12 +79,16 @@ id; `validate.ts` implements it and `corpus.ts` holds the path rules. An archive
 breaks (`archive/not-zip`, `manifest/version`, ...), read off the `R49Error`.
 Every archive that loads is then checked for `images/missing` and
 `images/orphan`, read off `imageMismatches()`. The corpus rules then block on
-`archive/id`, `archive/id-collision`, `labels/provenance`, `labels/class`,
-`path/shape`, `path/slug` and `path/owner`.
+`archive/id`, `archive/id-collision`, `images/duplicate`, `labels/provenance`,
+`labels/class`, `path/shape`, `path/slug` and `path/owner`. The first two compare
+each submission with every other archive in `archives/` and with each other.
 
 Warnings, read by the maintainer and blocking nothing: `calibration/dpt` (DPT
 below the recommended DPT, 20), `calibration/unresolved`,
-`calibration/off-reference-plane` and `images/incomplete`.
+`calibration/off-reference-plane` and `images/incomplete`. Given `--base`, a
+submission with the id of an archive at that commit is an update: the report's
+`change` counts what it changed, and `archive/id-changed`, `images/removed`,
+`images/renamed` and `images/replaced` warn.
 
 **A missing `camera_height_mm` is deliberately not one of them.** It would fire
 on every submission from day one, and a warning that always

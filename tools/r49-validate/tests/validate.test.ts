@@ -3,7 +3,7 @@ import { expect } from '../../../scripts/test/expect.ts';
 import JSZip from 'jszip';
 import { R49Archive, type ManifestData } from '@rails49/r49';
 import { RECOMMENDED_DPT } from '../src/guidance.ts';
-import { validate, type ArchiveInput } from '../src/validate.ts';
+import { readContents, validate, type ArchiveInput, type Contents } from '../src/validate.ts';
 
 // Every archive here is built by R49Archive and exported through the real
 // serializer, so the bytes under test are the bytes this project emits. Nothing
@@ -12,6 +12,11 @@ import { validate, type ArchiveInput } from '../src/validate.ts';
 // the assertions that depend on it.
 
 const A_JPEG = new Uint8Array([0xff, 0xd8, 0xff, 0xd9]);
+
+let photos = 0;
+/** JPEG bytes no other call returns, so no two built images match unless a test says so. */
+const aPhoto = () =>
+  new Uint8Array([0xff, 0xd8, ...new TextEncoder().encode(String(photos++)), 0xff, 0xd9]);
 
 /** Two calibration points far enough apart to reach the recommended DPT at HO. */
 const CALIBRATED = [
@@ -25,15 +30,21 @@ interface Build {
   labels?: Record<string, unknown>[];
   complete?: boolean;
   images?: number;
+  /** The bytes of each image, in order; their count overrides `images`. */
+  photos?: Uint8Array[];
+  /** The filename of each image, in order, in place of `img_<i>.jpg`. */
+  filenames?: string[];
   extraEntry?: string;
   missingImage?: boolean;
 }
 
 async function build(path: string, opts: Build = {}): Promise<ArchiveInput> {
   const archive = new R49Archive();
-  const count = opts.images ?? 1;
+  const count = opts.photos?.length ?? opts.images ?? 1;
+  const photos = opts.photos ?? Array.from({ length: count }, aPhoto);
+  const filename = (i: number) => opts.filenames?.[i] ?? `img_${i}.jpg`;
   const images = Array.from({ length: count }, (_, i) => ({
-    filename: `img_${i}.jpg`,
+    filename: filename(i),
     labeled_complete: opts.complete ?? true,
     labels: i === 0 ? (opts.labels ?? []) : [],
   }));
@@ -55,7 +66,7 @@ async function build(path: string, opts: Build = {}): Promise<ArchiveInput> {
   archive.setManifest(manifest as ManifestData);
 
   if (!opts.missingImage) {
-    for (let i = 0; i < count; i++) await archive.addImage(`img_${i}.jpg`, A_JPEG);
+    for (let i = 0; i < count; i++) await archive.addImage(filename(i), photos[i]);
   }
   if (opts.extraEntry) await archive.addImage(opts.extraEntry, A_JPEG);
   // addImage appends a manifest entry, so the file would not be an orphan.
@@ -87,6 +98,11 @@ async function idlessArchive(): Promise<Uint8Array> {
   );
   zip.file('img_0.jpg', A_JPEG);
   return await zip.generateAsync({ type: 'uint8array' });
+}
+
+/** A built archive as the corpus beside, or before, a submission holds it. */
+async function contents(path: string, opts: Build = {}): Promise<Contents> {
+  return (await readContents(await build(path, opts)))!;
 }
 
 const car = (over: Record<string, unknown> = {}) => ({
@@ -236,8 +252,7 @@ describe('validate', () => {
       expect(report.ok).toBe(false);
     });
 
-    it('leaves the same id in two different directories alone', async () => {
-      // The cross-contributor fork case is deliberately un-designed-for.
+    it('blocks the same id in two different directories', async () => {
       const report = await validate(
         [
           await build('archives/alice/west-yard.r49', { id: 'sameIdHere' }),
@@ -246,7 +261,157 @@ describe('validate', () => {
         { author: null }
       );
 
-      expect(report.ok).toBe(true);
+      expect(codes(report.archives[1].errors)).toEqual(['archive/id-collision']);
+      expect(report.archives[1].errors[0].message).toContain('archives/alice/west-yard.r49');
+    });
+
+    it('blocks an id another archive in the corpus already has', async () => {
+      const report = await validate(
+        [await build('archives/alice/west-yard.r49', { id: 'sameIdHere' })],
+        { author: 'alice', corpus: [await contents('archives/bob/east-yard.r49', { id: 'sameIdHere' })] }
+      );
+
+      expect(codes(report.archives[0].errors)).toEqual(['archive/id-collision']);
+    });
+  });
+
+  describe('images/duplicate', () => {
+    it('blocks an image another archive in the corpus has', async () => {
+      const photo = aPhoto();
+      const report = await validate(
+        [await build('archives/alice/west-yard.r49', { photos: [photo, aPhoto()] })],
+        {
+          author: 'alice',
+          corpus: [await contents('archives/bob/east-yard.r49', { id: 'bobsArchive', photos: [photo] })],
+        }
+      );
+
+      const errors = report.archives[0].errors;
+      expect(codes(errors)).toEqual(['images/duplicate']);
+      expect(errors[0].message).toContain('img_0.jpg');
+      expect(errors[0].message).toContain('archives/bob/east-yard.r49: img_0.jpg');
+    });
+
+    it('blocks one photograph stored twice in one archive', async () => {
+      const photo = aPhoto();
+      const result = await reportFor(
+        await build('archives/alice/west-yard.r49', { photos: [photo, photo] })
+      );
+
+      expect(codes(result.errors)).toEqual(['images/duplicate', 'images/duplicate']);
+    });
+
+    it('blocks two submissions sharing an image', async () => {
+      const photo = aPhoto();
+      const report = await validate(
+        [
+          await build('archives/alice/west-yard.r49', { id: 'firstArchive', photos: [photo] }),
+          await build('archives/alice/east-yard.r49', { id: 'otherArchive', photos: [photo] }),
+        ],
+        { author: 'alice' }
+      );
+
+      expect(codes(report.archives[0].errors)).toEqual(['images/duplicate']);
+      expect(codes(report.archives[1].errors)).toEqual(['images/duplicate']);
+    });
+  });
+
+  describe('updates', () => {
+    it('reports no change without the corpus before the submission', async () => {
+      const result = await reportFor(await build('archives/alice/west-yard.r49'));
+      expect(result.change).toBeNull();
+    });
+
+    it('calls a submission whose id is not in the base new', async () => {
+      const report = await validate([await build('archives/alice/west-yard.r49')], {
+        author: 'alice',
+        base: [await contents('archives/bob/east-yard.r49', { id: 'bobsArchive' })],
+      });
+
+      expect(report.archives[0].change).toEqual({ kind: 'new' });
+      expect(report.archives[0].warnings).toEqual([]);
+    });
+
+    it('recognises a moved archive as an update, and does not compare it with itself', async () => {
+      const shots = [aPhoto(), aPhoto()];
+      const report = await validate(
+        [await build('archives/alice/new-name.r49', { photos: shots })],
+        // The merge removes the old path, so the corpus beside the submission
+        // is empty and only the base holds the earlier version.
+        { author: 'alice', base: [await contents('archives/alice/old-name.r49', { photos: shots })] }
+      );
+
+      const result = report.archives[0];
+      expect(result.errors).toEqual([]);
+      expect(result.warnings).toEqual([]);
+      expect(result.change).toEqual({
+        kind: 'update',
+        from: 'archives/alice/old-name.r49',
+        added: 0,
+        removed: 0,
+        renamed: 0,
+        replaced: 0,
+        relabeled: 0,
+        completed: 0,
+        uncompleted: 0,
+        calibration: false,
+      });
+    });
+
+    it('counts what an update changed, and warns where a reference by filename breaks', async () => {
+      const [a, b, c, d] = [aPhoto(), aPhoto(), aPhoto(), aPhoto()];
+      const earlier = await contents('archives/alice/west-yard.r49', {
+        photos: [a, b, c, d],
+        filenames: ['a.jpg', 'b.jpg', 'c.jpg', 'd.jpg'],
+        complete: false,
+      });
+      const report = await validate(
+        [
+          await build('archives/alice/west-yard.r49', {
+            // a kept and relabeled, b renamed to e, c a new photograph, d gone, f new.
+            photos: [a, b, aPhoto(), aPhoto()],
+            filenames: ['a.jpg', 'e.jpg', 'c.jpg', 'f.jpg'],
+            labels: [car()],
+            calibration: [
+              { px: { x: 0, y: 0 }, world: { x: 0, y: 0, z: 0 } },
+              { px: { x: 1200, y: 0 }, world: { x: 800, y: 0, z: 0 } },
+            ],
+          }),
+        ],
+        { author: 'alice', base: [earlier] }
+      );
+
+      const result = report.archives[0];
+      expect(result.change).toEqual({
+        kind: 'update',
+        from: 'archives/alice/west-yard.r49',
+        added: 1,
+        removed: 1,
+        renamed: 1,
+        replaced: 1,
+        relabeled: 1,
+        completed: 2,
+        uncompleted: 0,
+        calibration: true,
+      });
+      expect(codes(result.warnings)).toEqual(['images/removed', 'images/renamed', 'images/replaced']);
+      expect(result.warnings[0].message).toContain('d.jpg');
+      expect(result.warnings[1].message).toContain('b.jpg → e.jpg');
+      expect(result.warnings[2].message).toContain('c.jpg');
+      expect(result.errors).toEqual([]);
+    });
+
+    it('warns when a path now holds a different archive', async () => {
+      const report = await validate(
+        [await build('archives/alice/west-yard.r49', { id: 'secondOneXX' })],
+        { author: 'alice', base: [await contents('archives/alice/west-yard.r49', { id: 'firstOneXXX' })] }
+      );
+
+      const result = report.archives[0];
+      expect(result.change).toEqual({ kind: 'new' });
+      expect(codes(result.warnings)).toEqual(['archive/id-changed']);
+      expect(result.warnings[0].message).toContain('firstOneXXX');
+      expect(result.warnings[0].message).toContain('secondOneXX');
     });
   });
 

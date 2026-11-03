@@ -19,6 +19,31 @@ export type Scope =
   /** Not that. A `.r49` somewhere the corpus layout does not define. */
   | 'unknown';
 
+/**
+ * How a submission relates to the corpus before it. An update is recognised by
+ * its id, not its path, and its counts compare it with the archive it replaces.
+ */
+export type Change =
+  | { readonly kind: 'new' }
+  | {
+      readonly kind: 'update';
+      /** Where the archive it replaces sits. */
+      readonly from: string;
+      readonly added: number;
+      readonly removed: number;
+      /** Images with the same bytes under a new filename. */
+      readonly renamed: number;
+      /** Filenames kept, holding different bytes. */
+      readonly replaced: number;
+      /** Kept or renamed images whose labels changed. */
+      readonly relabeled: number;
+      /** Kept or renamed images now labeled complete that were not. */
+      readonly completed: number;
+      /** Kept or renamed images labeled complete before and not now. */
+      readonly uncompleted: number;
+      readonly calibration: boolean;
+    };
+
 /** One thing found, blocking or not. */
 export interface Finding {
   /** Stable machine name, safe to match on. Human text may be reworded. */
@@ -73,6 +98,8 @@ export interface ArchiveReport {
   readonly labels: number | null;
   readonly complete: number | null;
   readonly incomplete: number | null;
+  /** `null` when the corpus before the submission was not given, or the archive did not load. */
+  readonly change: Change | null;
   readonly errors: readonly Finding[];
   readonly warnings: readonly Finding[];
 }

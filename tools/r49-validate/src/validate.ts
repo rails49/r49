@@ -1,8 +1,17 @@
-import { R49Archive, R49Error, getDPT, getDPTResidual, isKnownClass } from '@rails49/r49';
-import { checkPath, handleOf, scopeOf } from './corpus.ts';
+import { createHash } from 'node:crypto';
+import {
+  R49Archive,
+  R49Error,
+  getDPT,
+  getDPTResidual,
+  isKnownClass,
+  type Image,
+  type ManifestData,
+} from '@rails49/r49';
+import { checkPath, scopeOf } from './corpus.ts';
 import { obliquityOf, pointsOffReferencePlane } from './geometry.ts';
 import { RECOMMENDED_DPT } from './guidance.ts';
-import { isOk, type ArchiveReport, type Finding, type Report } from './report.ts';
+import { isOk, type ArchiveReport, type Change, type Finding, type Report } from './report.ts';
 
 /**
  * What CI asserts about a corpus submission — FORMAT.md § Corpus rules, its
@@ -28,20 +37,55 @@ export interface ValidateOptions {
    */
   readonly author?: string | null;
   /**
-   * Archives already in the corpus that share a contributor directory with
-   * something submitted. Read for their ids alone, for `archive/id-collision`.
-   *
-   * Scoped to the author's own directory rather than the whole corpus: the only
-   * realistic collision is a contributor who re-downloaded, saved, and *added* a
-   * second file where they meant to replace one, and that happens inside their
-   * own directory. Corpus-wide would mean opening every archive in the repo on
-   * every pull request.
+   * Every other archive in the corpus as it is with the submission in place,
+   * for `archive/id-collision` and `images/duplicate`.
    */
-  readonly siblings?: readonly ArchiveInput[];
+  readonly corpus?: readonly Contents[];
+  /**
+   * The corpus before the submission, such as a pull request's base. A
+   * submission with the id of one of these is an update and is compared with
+   * it. `null` (the default) leaves every report's `change` unknown.
+   */
+  readonly base?: readonly Contents[] | null;
+}
+
+/**
+ * What one archive holds, read once: its id, its manifest, and the SHA-256 of
+ * each image's bytes by filename. The checks that compare archives read only
+ * this, so an archive other than a submission is opened once and not kept.
+ */
+export interface Contents {
+  readonly path: string;
+  readonly id: string | null;
+  readonly manifest: ManifestData;
+  readonly images: ReadonlyMap<string, string>;
+}
+
+async function contentsOf(path: string, archive: R49Archive): Promise<Contents> {
+  const manifest = archive.getManifest();
+  const images = new Map<string, string>();
+  for (const image of manifest.images) {
+    const bytes = await archive.getImage(image.filename);
+    if (bytes) images.set(image.filename, createHash('sha256').update(bytes).digest('hex'));
+  }
+  return { path, id: manifest.id ?? null, manifest, images };
+}
+
+/** The contents of an archive that is not a submission, or `null` for one that will not open. */
+export async function readContents(input: ArchiveInput): Promise<Contents | null> {
+  try {
+    return await contentsOf(input.path, await R49Archive.load(input.bytes));
+  } catch {
+    // An archive that does not load is not this submission's problem. It has
+    // its own report if it was submitted here, and is somebody else's if not.
+    return null;
+  }
 }
 
 /** The manifest fields a report quotes, once the archive has loaded. */
-function facts(archive: R49Archive): Omit<ArchiveReport, 'path' | 'scope' | 'errors' | 'warnings'> {
+function facts(
+  archive: R49Archive
+): Omit<ArchiveReport, 'path' | 'scope' | 'change' | 'errors' | 'warnings'> {
   const manifest = archive.getManifest();
   const images = manifest.images;
   const obliquity = obliquityOf(manifest);
@@ -176,51 +220,33 @@ function unloadable(path: string, error: Finding): ArchiveReport {
     labels: null,
     complete: null,
     incomplete: null,
+    change: null,
     errors: [error],
     warnings: [],
   };
 }
 
-/** The archive-level id, or `null` for anything that will not open. */
-async function idOf(input: ArchiveInput): Promise<string | null> {
-  try {
-    const archive = await R49Archive.load(input.bytes);
-    return archive.getManifest().id ?? null;
-  } catch {
-    // A sibling that does not load is not this pull request's problem. It has
-    // its own report if it was submitted here, and is somebody else's if not.
-    return null;
-  }
-}
-
 /**
- * `archive/id-collision` — two archives in one contributor directory must not share an id.
+ * `archive/id-collision` — no two archives in the corpus share an id.
  *
- * Compares each submission against its already-committed siblings *and* against
- * the other submissions in the same directory, since a single pull request can
- * add both halves of a collision.
+ * Compares each submission against the rest of the corpus *and* against the
+ * other submissions, since a single pull request can add both halves of a
+ * collision.
  */
-async function idCollisions(
-  submitted: readonly { input: ArchiveInput; id: string | null }[],
-  siblings: readonly ArchiveInput[]
-): Promise<Map<string, Finding[]>> {
+function idCollisions(
+  submitted: readonly Contents[],
+  corpus: readonly Contents[]
+): Map<string, Finding[]> {
   const byPath = new Map<string, Finding[]>();
 
-  const committed = new Map<string, string>();
-  for (const sibling of siblings) {
-    const id = await idOf(sibling);
-    if (id !== null) committed.set(`${handleOf(sibling.path)}\0${id}`, sibling.path);
-  }
-
   const seen = new Map<string, string>();
-  for (const { input, id } of submitted) {
-    const handle = handleOf(input.path);
-    if (id === null || handle === null) continue;
+  for (const other of corpus) if (other.id !== null) seen.set(other.id, other.path);
 
-    const key = `${handle}\0${id}`;
-    const clash = committed.get(key) ?? seen.get(key);
-    if (clash !== undefined && clash !== input.path) {
-      byPath.set(input.path, [
+  for (const { path, id } of submitted) {
+    if (id === null) continue;
+    const clash = seen.get(id);
+    if (clash !== undefined && clash !== path) {
+      byPath.set(path, [
         {
           code: 'archive/id-collision',
           message:
@@ -230,10 +256,149 @@ async function idCollisions(
         },
       ]);
     }
-    seen.set(key, input.path);
+    seen.set(id, path);
   }
 
   return byPath;
+}
+
+/**
+ * `images/duplicate` — no two images in the corpus have the same bytes.
+ *
+ * Each submitted image is compared with every other image in the submissions
+ * and the rest of the corpus. The version an update replaces is in neither, so
+ * an update is never compared with itself.
+ */
+function duplicateImages(
+  submitted: readonly Contents[],
+  corpus: readonly Contents[]
+): Map<string, Finding[]> {
+  const places = new Map<string, string[]>();
+  for (const archive of [...submitted, ...corpus]) {
+    for (const [filename, hash] of archive.images) {
+      places.set(hash, [...(places.get(hash) ?? []), `${archive.path}: ${filename}`]);
+    }
+  }
+
+  const byPath = new Map<string, Finding[]>();
+  for (const archive of submitted) {
+    const findings: Finding[] = [];
+    for (const [filename, hash] of archive.images) {
+      const here = `${archive.path}: ${filename}`;
+      const elsewhere = places.get(hash)!.filter(place => place !== here);
+      if (elsewhere.length === 0) continue;
+      findings.push({
+        code: 'images/duplicate',
+        message:
+          `${filename} has the same bytes as ${elsewhere.join(', ')}. A photograph is in the ` +
+          `corpus once: keep one copy and remove the others.`,
+      });
+    }
+    if (findings.length > 0) byPath.set(archive.path, findings);
+  }
+
+  return byPath;
+}
+
+/** Why a reference to an image may break, added to each image-level update warning. */
+const BROKEN_REFERENCE =
+  'Anything that refers to an image by archive id and filename, such as a held-out test set, ' +
+  'no longer finds it.';
+
+/**
+ * How a submission relates to the corpus before it, and the warnings that
+ * follow: `archive/id-changed`, `images/removed`, `images/renamed` and
+ * `images/replaced`.
+ */
+function compareWithBase(
+  submitted: Contents,
+  base: readonly Contents[]
+): { change: Change; warnings: Finding[] } {
+  const sameId = base.filter(b => b.id !== null && b.id === submitted.id);
+  const earlier = sameId.find(b => b.path === submitted.path) ?? sameId[0];
+
+  if (earlier === undefined) {
+    const displaced = base.find(b => b.path === submitted.path);
+    const warnings: Finding[] = [];
+    if (displaced !== undefined) {
+      warnings.push({
+        code: 'archive/id-changed',
+        message:
+          `${submitted.path} held the archive ${displaced.id ?? 'with no id'}, and now holds ` +
+          `${submitted.id ?? 'one with no id'}: a different archive. ${BROKEN_REFERENCE} If you ` +
+          `meant to update that archive, keep its id.`,
+      });
+    }
+    return { change: { kind: 'new' }, warnings };
+  }
+
+  const before = new Map(earlier.manifest.images.map(img => [img.filename, img]));
+  const after = new Map(submitted.manifest.images.map(img => [img.filename, img]));
+  const afterByHash = new Map([...submitted.images].map(([filename, hash]) => [hash, filename]));
+
+  const kept: [Image, Image][] = [];
+  const removed: string[] = [];
+  const renamed: string[] = [];
+  const replaced: string[] = [];
+  const accounted = new Set<string>();
+
+  for (const [filename, old] of before) {
+    const hash = earlier.images.get(filename);
+    const same = after.get(filename);
+    if (same !== undefined) {
+      accounted.add(filename);
+      if (hash !== undefined && submitted.images.get(filename) !== hash) replaced.push(filename);
+      else kept.push([old, same]);
+      continue;
+    }
+    const moved = hash === undefined ? undefined : afterByHash.get(hash);
+    if (moved !== undefined && !before.has(moved)) {
+      accounted.add(moved);
+      renamed.push(`${filename} → ${moved}`);
+      kept.push([old, after.get(moved)!]);
+    } else {
+      removed.push(filename);
+    }
+  }
+
+  const warnings: Finding[] = [];
+  if (removed.length > 0) {
+    warnings.push({
+      code: 'images/removed',
+      message: `This update removes ${removed.join(', ')}. ${BROKEN_REFERENCE}`,
+    });
+  }
+  if (renamed.length > 0) {
+    warnings.push({
+      code: 'images/renamed',
+      message: `This update renames ${renamed.join(', ')}. ${BROKEN_REFERENCE}`,
+    });
+  }
+  if (replaced.length > 0) {
+    warnings.push({
+      code: 'images/replaced',
+      message:
+        `This update stores a different photograph under ${replaced.join(', ')}. A reference ` +
+        `to it by archive id and filename, such as a held-out test set, now finds the new one.`,
+    });
+  }
+
+  const labels = (img: Image) => JSON.stringify(img.labels);
+  const change: Change = {
+    kind: 'update',
+    from: earlier.path,
+    added: [...after.keys()].filter(filename => !accounted.has(filename)).length,
+    removed: removed.length,
+    renamed: renamed.length,
+    replaced: replaced.length,
+    relabeled: kept.filter(([a, b]) => labels(a) !== labels(b)).length,
+    completed: kept.filter(([a, b]) => !a.labeled_complete && b.labeled_complete).length,
+    uncompleted: kept.filter(([a, b]) => a.labeled_complete && !b.labeled_complete).length,
+    calibration:
+      JSON.stringify(earlier.manifest.layout.calibration) !==
+      JSON.stringify(submitted.manifest.layout.calibration),
+  };
+  return { change, warnings };
 }
 
 /** Validate a set of submitted archives. */
@@ -242,9 +407,10 @@ export async function validate(
   options: ValidateOptions = {}
 ): Promise<Report> {
   const author = options.author ?? null;
-  const siblings = options.siblings ?? [];
+  const corpus = options.corpus ?? [];
+  const base = options.base ?? null;
 
-  const loaded: { input: ArchiveInput; id: string | null }[] = [];
+  const loaded: Contents[] = [];
   const reports = new Map<string, ArchiveReport>();
 
   for (const input of submitted) {
@@ -280,22 +446,29 @@ export async function validate(
         message:
           `${input.path} has no archive-level id. Save it again with a writer that adds one, ` +
           `or add a top-level "id" to its manifest.json: a non-empty string no other ` +
-          `archive in its directory uses, kept on every later save.`,
+          `archive in the corpus uses, kept on every later save.`,
       });
     }
     const warnings = qualityWarnings(archive, f);
 
-    loaded.push({ input, id: f.id });
-    reports.set(input.path, { path: input.path, scope, ...f, errors, warnings });
+    const contents = await contentsOf(input.path, archive);
+    let change: Change | null = null;
+    if (base !== null) {
+      const compared = compareWithBase(contents, base);
+      change = compared.change;
+      warnings.push(...compared.warnings);
+    }
+
+    loaded.push(contents);
+    reports.set(input.path, { path: input.path, scope, ...f, change, errors, warnings });
   }
 
-  const collisions = await idCollisions(
-    loaded.filter(l => scopeOf(l.input.path) === 'archives'),
-    siblings
-  );
-  for (const [path, findings] of collisions) {
-    const report = reports.get(path);
-    if (report) reports.set(path, { ...report, errors: [...report.errors, ...findings] });
+  const inCorpus = loaded.filter(c => scopeOf(c.path) === 'archives');
+  for (const found of [idCollisions(inCorpus, corpus), duplicateImages(inCorpus, corpus)]) {
+    for (const [path, findings] of found) {
+      const report = reports.get(path)!;
+      reports.set(path, { ...report, errors: [...report.errors, ...findings] });
+    }
   }
 
   const archives = submitted.map(s => reports.get(s.path)!);

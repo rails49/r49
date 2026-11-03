@@ -54,8 +54,10 @@ export const CORPUS_RULES = [
   'path/owner',
   /** The archive carries no archive-level `id`. */
   'archive/id',
-  /** Two archives in one contributor directory share an `id`. */
+  /** Two archives in the corpus share an `id`. */
   'archive/id-collision',
+  /** Two images in the corpus have the same bytes. */
+  'images/duplicate',
   /** A label is still `proposed` — model output nobody reviewed. */
   'labels/provenance',
   /** A label's class is not in the vocabulary. */

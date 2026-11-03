@@ -25,6 +25,10 @@ _Avoid_: consumer, classifier
 **Corpus**:
 The archives contributed to `rails49/r49`, which training draws from. See [README](README.md).
 
+**Update**:
+A submission that replaces an archive already in the corpus. It has the same id as that archive; its path may differ.
+_Avoid_: resubmission, revision
+
 **Corpus rule**:
 A requirement an archive must meet to be accepted into the corpus, beyond the format. See [FORMAT § Corpus rules](FORMAT.md#corpus-rules).
 
@@ -37,6 +41,10 @@ The DPT the corpus asks contributors to reach. See [FORMAT § The recommended DP
 **Image**:
 One photograph of the layout in an archive. See [FORMAT § Image](FORMAT.md#image).
 _Avoid_: frame (for a stored image; a frame is one picture from the live camera)
+
+**Duplicate image**:
+An image whose bytes equal another image's in the corpus.
+_Avoid_: copy, repeat
 
 **Sensor**:
 A point on the layout where occupancy must be reported. See [FORMAT § Sensor](FORMAT.md#sensor).

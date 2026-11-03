@@ -98,6 +98,10 @@ training as ground truth is the one loop this corpus exists to prevent.
 2. Put it in `archives/<your-github-handle>/`.
 3. Open a pull request and confirm the three statements in the template.
 
+To change an archive that is already merged, edit it, save it, and replace the
+file. Keep its id and its image filenames: other projects refer to an image by
+archive id and filename, and CI warns when an update removes or renames one.
+
 ### What review consists of
 
 The maintainer reads CI's table — resolution, calibration residual and
