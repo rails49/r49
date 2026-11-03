@@ -38,12 +38,29 @@
         "name": "siding 3"
       }
     ],
-    "centerlines": [
+    "tracks": [
       {
-        "points": [
+        "nodes": [
           {
             "x": 10,
-            "y": 20
+            "y": 20,
+            "heading": 0.3218
+          },
+          {
+            "x": 100,
+            "y": 50,
+            "heading": 0.3218
+          }
+        ],
+        "clicks": [
+          {
+            "x": 10,
+            "y": 20,
+            "straight": true
+          },
+          {
+            "x": 55,
+            "y": 36
           },
           {
             "x": 100,

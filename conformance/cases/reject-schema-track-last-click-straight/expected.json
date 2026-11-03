@@ -1,0 +1,5 @@
+{
+  "description": "A straight mark on a track's last click: refused, since no gap starts there.",
+  "result": "reject",
+  "rule": "manifest/schema"
+}

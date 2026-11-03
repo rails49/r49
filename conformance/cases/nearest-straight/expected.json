@@ -1,0 +1,51 @@
+{
+  "description": "The nearest point on a straight from (0, 100) to (1000, 100): the foot of the perpendicular, or the end beyond it. There is no distance cap.",
+  "points": [],
+  "nearest": [
+    {
+      "at": {
+        "x": 333,
+        "y": 140
+      },
+      "track": 0,
+      "x": 333,
+      "y": 100,
+      "heading": 0,
+      "distance": 40
+    },
+    {
+      "at": {
+        "x": 250,
+        "y": 100
+      },
+      "track": 0,
+      "x": 250,
+      "y": 100,
+      "heading": 0,
+      "distance": 0
+    },
+    {
+      "at": {
+        "x": 1100,
+        "y": 130
+      },
+      "track": 0,
+      "x": 1000,
+      "y": 100,
+      "heading": 0,
+      "distance": 104.4030650891055
+    },
+    {
+      "at": {
+        "x": 500,
+        "y": 10100
+      },
+      "track": 0,
+      "x": 500,
+      "y": 100,
+      "heading": 0,
+      "distance": 10000
+    }
+  ],
+  "tolerance": 1e-09
+}

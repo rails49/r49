@@ -18,8 +18,12 @@ Each directory under `cases/` is one case. It holds exactly one input:
   `images/missing` and `images/orphan`. A runner whose implementation reads manifests only inside an
   archive may zip the bytes as `manifest.json` beside a placeholder for every
   image the manifest names, which is what the TypeScript runner does.
+* `track.json`: tracks, `{ "tracks": [...] }`, each a track as
+  [FORMAT.md § Track](../FORMAT.md#track) gives it. The case is about the curve
+  between nodes, [FORMAT.md § Node](../FORMAT.md#node), not about accepting or
+  refusing: see [A track case](#a-track-case).
 
-and `expected.json`:
+and `expected.json`, which for an archive or a manifest is:
 
 ```jsonc
 {
@@ -51,12 +55,43 @@ is not. Every format rule id has at least one case: a rejecting case, or for
 accepting case that reports it. Each rejecting case breaks exactly one rule,
 since FORMAT.md does not say which rule is reported when several are broken.
 
+### A track case
+
+Its `expected.json`:
+
+```jsonc
+{
+  "description": "…",            // what the case is about; not checked
+  "points": [                    // points on the curve
+    { "track": 0, "segment": 0, "t": 0.5, "x": 150, "y": 200, "heading": 0.9272952180016122 }
+  ],
+  "nearest": [                   // the point on the tracks nearest `at`
+    { "at": { "x": 333, "y": 140 }, "track": 0, "x": 333, "y": 100, "heading": 0, "distance": 40 }
+  ],
+  "tolerance": 1e-9              // absolute; applies to every number checked
+}
+```
+
+`segment` is the index of the segment's first node in the track's `nodes`. A
+track case **agrees** when:
+
+* for each of `points`, the point on that segment at `t` is within `tolerance`
+  of `x` and `y`, and the heading there is in (−π, π] and within `tolerance`
+  of `heading`, modulo 2π;
+* for each of `nearest`, the nearest point is on track `track`, its position
+  and its distance from `at` are within `tolerance` of `x`, `y` and
+  `distance`, and its heading is as for `points`.
+
+Every expected value in a track case comes from a closed form, worked in the
+case's `description`, never from an implementation's output.
+
 ## The cases
 
 The names say what each is about: `accept-*`; `reject-*`, named after the rule
 broken; `images-*` for an archive that loads and reports an image mismatch;
-`fit-*` for the calibration fit; and `height-*` for the fit with a camera
-height.
+`fit-*` for the calibration fit; `height-*` for the fit with a camera
+height; and the track cases, `curve-*` for points on the curve between nodes
+and `nearest-*` for the nearest point on a track.
 `accept-written-by-typescript` is an archive `@rails49/r49`'s writer exported,
 with that package's DPT and residual.
 `format-v4` is the frozen archive rails49/occupancy wrote in August 2026; it is

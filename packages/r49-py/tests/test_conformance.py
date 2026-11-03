@@ -2,6 +2,8 @@
 
 Cases assert an outcome (accept or reject, the rule id, DPT, residual and
 image mismatches) and never a message: the id is the contract, the wording is not.
+A case whose input is ``track.json`` asserts points on the curve between nodes
+and the nearest point on a track instead.
 ``conformance/README.md`` defines a case; this is the Python way of running one.
 """
 
@@ -83,20 +85,80 @@ def disagreements(expected: dict[str, Any], outcome: Outcome) -> list[str]:
     return found
 
 
+def track_disagreements(expected: dict[str, Any], tracks: list[r49.Track]) -> list[str]:
+    """Where this package's curve through ``tracks`` disagrees with a track
+    case's ``expected``, one line each. Each coordinate and distance must be
+    within ``tolerance``; each heading must be in (−π, π] and within
+    ``tolerance`` of the expected direction, modulo 2π."""
+    tolerance = expected["tolerance"]
+    found: list[str] = []
+
+    def near(what: str, got: float, want: float) -> None:
+        if not math.fabs(got - want) <= tolerance:
+            found.append(f"{what}: expected {want} ± {tolerance}, got {got}")
+
+    def heading(what: str, got: float, want: float) -> None:
+        if not -math.pi < got <= math.pi:
+            found.append(f"{what}: heading {got} is outside (−π, π]")
+        elif not math.fabs(r49.wrap_angle(got - want)) <= tolerance:
+            found.append(f"{what}: expected heading {want} ± {tolerance}, got {got}")
+
+    for p in expected["points"]:
+        what = f"track {p['track']} segment {p['segment']} t {p['t']}"
+        track: int = p["track"]
+        i: int = p["segment"]
+        nodes = tracks[track].nodes
+        s = r49.segment(nodes[i], nodes[i + 1])
+        at = r49.point_at(s, p["t"])
+        near(f"{what} x", at.x, p["x"])
+        near(f"{what} y", at.y, p["y"])
+        heading(what, r49.heading_at(s, p["t"]), p["heading"])
+    for n in expected["nearest"]:
+        what = f"nearest ({n['at']['x']}, {n['at']['y']})"
+        got = r49.nearest_on_track(tracks, r49.Point.model_validate(n["at"]))
+        if got is None:
+            found.append(f"{what}: expected a point, got None")
+            continue
+        if got.track != n["track"]:
+            found.append(f"{what}: expected track {n['track']}, got {got.track}")
+        near(f"{what} x", got.point.x, n["x"])
+        near(f"{what} y", got.point.y, n["y"])
+        near(f"{what} distance", got.distance, n["distance"])
+        heading(what, got.heading, n["heading"])
+    return found
+
+
 def expected_of(case: Path) -> dict[str, Any]:
     return json.loads((case / "expected.json").read_text(encoding="utf-8"))
 
 
+def tracks_of(case: Path) -> list[r49.Track]:
+    data = json.loads((case / "track.json").read_text(encoding="utf-8"))
+    return [r49.Track.model_validate(track) for track in data["tracks"]]
+
+
 ALL = sorted(path for path in CASES.iterdir() if path.is_dir())
+TRACK = [c for c in ALL if (c / "track.json").exists()]
+VERDICT = [c for c in ALL if c not in TRACK]
 
 
-@pytest.mark.parametrize("case", ALL, ids=[path.name for path in ALL])
+def test_every_case_holds_one_input() -> None:
+    inputs = ("archive.r49", "manifest.json", "track.json")
+    assert [c.name for c in ALL if sum((c / name).exists() for name in inputs) != 1] == []
+
+
+@pytest.mark.parametrize("case", VERDICT, ids=[path.name for path in VERDICT])
 def test_case(case: Path) -> None:
     assert disagreements(expected_of(case), judge(case)) == []
 
 
-REJECTED = {expected_of(c)["rule"] for c in ALL if expected_of(c)["result"] == "reject"}
-REPORTED = {m["rule"] for c in ALL for m in expected_of(c).get("image_mismatches", [])}
+@pytest.mark.parametrize("case", TRACK, ids=[path.name for path in TRACK])
+def test_track_case(case: Path) -> None:
+    assert track_disagreements(expected_of(case), tracks_of(case)) == []
+
+
+REJECTED = {expected_of(c)["rule"] for c in VERDICT if expected_of(c)["result"] == "reject"}
+REPORTED = {m["rule"] for c in VERDICT for m in expected_of(c).get("image_mismatches", [])}
 IMAGE_RULES = [rule for rule in r49.FORMAT_RULES if rule.startswith("images/")]
 
 

@@ -1,0 +1,5 @@
+{
+  "description": "A track click with no y.",
+  "result": "reject",
+  "rule": "manifest/schema"
+}

@@ -1,5 +1,0 @@
-{
-  "description": "A centerline of one point: refused, since it has no segment.",
-  "result": "reject",
-  "rule": "manifest/schema"
-}

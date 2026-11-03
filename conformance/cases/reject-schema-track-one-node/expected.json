@@ -1,0 +1,5 @@
+{
+  "description": "A track of one node: refused, since it has no segment.",
+  "result": "reject",
+  "rule": "manifest/schema"
+}
