@@ -6,10 +6,10 @@ to train the detector at the highest DPT available.
 | Archive | Id | Images | Labels | DPT | Residual |
 | :--- | :--- | ---: | ---: | ---: | ---: |
 | `ceiling-2026-10-28.r49` | `0Rc97ho9K88` | 12 | 268 | 32.6 | 236 px |
-| `ceiling-2026-10-29.r49` | `0RdWS5uEHYG` | 12 | 404 | 32.6 | 165 px |
-| `ceiling-2026-10-29b.r49` | `0Re28B7eddY` | 11 | 385 | 32.4 | 155 px |
+| `ceiling-2026-10-29.r49` | `0RdWS5uEHYG` | 12 | 397 | 32.6 | 165 px |
+| `ceiling-2026-10-29b.r49` | `0Re28B7eddY` | 11 | 382 | 32.4 | 155 px |
 
-All labels are `human`. Every image is labeled complete except `IMG_2908.jpg`
+All labels are `human`. Every image is labeled complete except `IMG_2918.jpg`
 in `ceiling-2026-10-29b`.
 
 Each capture had more images than its archive holds. Some were removed to
