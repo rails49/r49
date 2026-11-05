@@ -7,8 +7,8 @@ in [GLOSSARY.md](GLOSSARY.md).
 It holds two kinds of rule, kept apart on purpose:
 
 * **[Format rules](#format-rules)** say what an archive is. They hold for every
-  archive, inside the corpus and outside it. A file that breaks one is not a
-  valid archive. A reader refuses it, except under the two image rules, which a
+  archive, inside the corpus and outside it. A zip or folder that breaks one is
+  not a valid archive. A reader refuses it, except under the two image rules, which a
   reader reports.
 * **[Corpus rules](#corpus-rules)** say what this repository accepts. They sit
   here because a reader needs some of them to interpret a field (the vocabulary
@@ -21,13 +21,25 @@ This document is licensed [CC BY 4.0](LICENSE), like the archives it describes.
 
 ## The archive
 
-An archive is a zip file. At its root it holds:
+An archive is a zip file or a folder named `*.r49`, with the same contents and
+the same rules: adding an image to a folder does not rewrite the whole archive,
+and any static HTTP server can serve its files one at a time. `version` stays 4
+in both ([ADR 0008](docs/adr/0008-v4-only-and-optional-fields-add-no-version.md)).
+At its root an archive holds:
 
 * `manifest.json`: the manifest, UTF-8 JSON with no byte-order mark, described below.
 * The images, JPEG in practice, each at the path its `images[].filename` names.
 
-Nothing else. Every image the manifest names is in the zip, and every file in
-the zip other than `manifest.json` is an image the manifest names.
+Nothing else. Every image the manifest names is in the archive, and every file
+in the archive other than `manifest.json` is an image the manifest names.
+
+A folder ignores any path with a segment that starts with a dot, so `.DS_Store`,
+`images/.DS_Store` and `.git/config` report no `images/orphan`. A manifest that
+names such a path reports `images/missing` in a folder. A zip ignores nothing: a
+dot file in a zip is `images/orphan` unless the manifest names it.
+
+A writer of a folder writes the images first and `manifest.json` last, by rename,
+so that a reader never finds a manifest naming an image not yet written.
 
 One archive is one layout seen from one camera position. Calibration and
 sensors belong to the layout, not to an image, so every image in an archive
@@ -85,7 +97,7 @@ down. Layout positions are in millimetres.
 | Field | Type | Meaning |
 | :--- | :--- | :--- |
 | `version` | the integer `4` | The format version. See [Versions](#versions). |
-| `id` | non-empty string, optional | The archive's identity, the same across every save. It is identity, not an address: renaming or moving the file does not make it a different archive. |
+| `id` | non-empty string, optional | The archive's identity, the same across every save. It is identity, not an address: renaming or moving the archive does not make it a different archive. |
 | `layout` | object | The layout the camera sees. |
 | `camera` | object | The camera the images were taken with. |
 | `images` | array of image | The images, in order. |
@@ -198,7 +210,7 @@ into (−π, π] as `wrapAngle`; `rails49-r49` names them `segment`, `point_at`,
 
 | Field | Type | Meaning |
 | :--- | :--- | :--- |
-| `filename` | string | The image's path in the zip. |
+| `filename` | string | The image's path in the archive, from its root. It does not start with `/` and no segment of it is exactly `..`; `frame..jpg` is valid. |
 | `labeled_complete` | boolean | Labeled complete: a person's assertion that no car in this image is unlabeled. An image marked complete with no labels is a valid all-background sample. Absent reads as `false`; nothing but a person sets it. |
 | `labels` | array of car label | The cars in this image. |
 
@@ -266,14 +278,15 @@ more than one rule, which one is reported is not specified.
 
 | Rule id | The archive is refused because |
 | :--- | :--- |
-| `archive/empty` | the bytes are empty. |
-| `archive/not-zip` | the bytes are not a readable zip. |
-| `archive/no-manifest` | the zip has no `manifest.json` at its root. |
+| `archive/empty` | the bytes of a zip are empty. A zip only. |
+| `archive/not-zip` | the bytes of a zip are not a readable zip. A zip only. |
+| `archive/no-manifest` | the archive has no `manifest.json` at its root, whether a zip or a folder. |
 | `manifest/not-json` | `manifest.json` is not UTF-8 JSON: it does not parse, holds a byte that is not UTF-8, or starts with a byte-order mark. |
 | `manifest/version` | `version` is not 4, including a manifest that is not a JSON object. |
 | `manifest/unknown-key` | an object holds a key this document does not define. |
 | `manifest/duplicate-id` | two sensors, or two labels in one image, share an `id`. |
 | `manifest/provenance` | a label's `provenance` is missing or not one of the three, or `proposed_by` is present on `human`, or missing or empty on `proposed` or `corrected`. |
+| `manifest/filename` | an image's `filename` starts with `/` or has a path segment that is exactly `..`, in a zip, a folder or a bare manifest. |
 | `manifest/schema` | any other field is missing, has the wrong type or is out of range: no `scale`, an unknown scale name, an empty `id`, a `camera_height_mm` of 0 or below, a non-integer resolution, a track of one node or with two consecutive nodes at one position, a node with no `heading`, a track whose last click is `straight`, a number too large to be finite such as `1e999`. |
 
 Two rules are about the images, and a reader reports them instead of refusing
@@ -282,10 +295,10 @@ under its rule id:
 
 | Rule id | Reported when |
 | :--- | :--- |
-| `images/missing` | the manifest names an image the zip does not hold. |
-| `images/orphan` | the zip holds a file other than `manifest.json` that no image names. |
+| `images/missing` | the manifest names an image the archive does not hold. |
+| `images/orphan` | the archive holds a file other than `manifest.json` that no image names. |
 
-A reader that parses a manifest on its own, without a zip, applies every rule
+A reader that parses a manifest on its own, without an archive, applies every rule
 except `archive/empty`, `archive/not-zip`, `archive/no-manifest`,
 `images/missing` and `images/orphan`.
 
@@ -402,7 +415,7 @@ A submission under `archives/<handle>/` is refused, with the id shown, unless:
 | `images/duplicate` | No image has the same bytes as another image in this archive or in any other archive in the corpus. |
 | `labels/provenance` | No label is `proposed`. A person reviews every proposal, which makes it `corrected`. |
 | `labels/class` | Every label's `class` is in the [vocabulary](#the-vocabulary). |
-| `path/shape` | The file sits at `archives/<handle>/<slug>.r49`. |
+| `path/shape` | The file sits at `archives/<handle>/<slug>.r49`. A submission is a zip: a file inside a folder `archives/<handle>/<slug>.r49/` is refused. |
 | `path/slug` | The file name is lowercase letters, digits and single hyphens, then `.r49`. |
 | `path/owner` | `<handle>` is the GitHub handle of whoever submits it. |
 
