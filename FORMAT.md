@@ -302,6 +302,13 @@ A reader that parses a manifest on its own, without an archive, applies every ru
 except `archive/empty`, `archive/not-zip`, `archive/no-manifest`,
 `images/missing` and `images/orphan`.
 
+A reader may read an archive through a base URL, as `<base>/manifest.json` and
+`<base>/<filename>` with each path segment percent-encoded. It applies every rule
+except `archive/empty`, `archive/not-zip`, `images/missing` and `images/orphan`:
+a URL cannot be listed, and checking every image takes one request each. A 404
+means the file is absent, so no manifest is `archive/no-manifest`. Any other HTTP
+or network failure is no verdict on the archive and reports no rule.
+
 ## Scales and gauge
 
 The prototype's standard gauge is **1435 mm**. A model's track gauge in mm is
