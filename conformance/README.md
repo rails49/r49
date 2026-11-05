@@ -66,8 +66,9 @@ every form agrees:
 * A readable zip unpacked as a folder. So a zip case holds no dot path, which a
   zip reports and a folder ignores.
 * Over a local HTTP server, from a base URL: a readable zip unpacked, or a
-  folder. FORMAT.md exempts a URL from `images/missing` and `images/orphan`, so
-  over a URL `image_mismatches` is not checked.
+  folder. FORMAT.md exempts a base URL from `images/missing` and `images/orphan`,
+  so over a URL the image mismatches must be empty, whatever `image_mismatches`
+  says.
 
 A zip that is not readable, one a case expects refused as `archive/empty` or
 `archive/not-zip`, runs as a zip only. A folder case does not run as a zip: a dot

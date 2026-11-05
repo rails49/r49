@@ -75,7 +75,7 @@ const jpeg = await archive.getImage(archive.getManifest().images[0].filename);
 
 await archive.addImage('new-shot.jpg', bytes);
 await archive.writeChanges({
-  put: async (name, bytes) => { /* PUT to <base>/<name> */ },
+  put: async (name, bytes) => { /* PUT to <base>/<name>, atomically */ },
   remove: async name => { /* DELETE <base>/<name> */ },
 });
 ```
@@ -90,8 +90,10 @@ verdict on the archive. A URL cannot be listed, so `listEntries()` is
 `export()` fetches each image it does not hold, and throws if one is missing.
 
 `writeChanges` writes the added images, then the manifest, then the removals, and
-holds no image it has written. The next call after a rejected `put` or `remove`
-writes what is still unwritten. It throws on a zip, which `export()` writes.
+holds no image it has written. FORMAT.md has a folder's writer write the manifest
+last, by rename: `writeChanges` keeps the order, and the caller's `put` must make
+each write atomic. The next call after a rejected `put` or `remove` writes what is
+still unwritten. It throws on a zip, which `export()` writes.
 
 ## Licence
 
