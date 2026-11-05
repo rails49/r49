@@ -347,6 +347,8 @@ export class R49Archive {
    * order FORMAT.md asks of a folder's writer: `put` for each added image the
    * manifest names, `put` for `manifest.json`, then `remove` for each name the
    * base held at the last write and the manifest no longer names, one at a time.
+   * FORMAT.md also has that writer write by rename: this keeps the order, and the
+   * writer's `put` must make each write atomic.
    *
    * It takes the manifest as it stands when called, with an `id` minted as
    * {@link saveManifest} does, and the images added so far; an edit made during

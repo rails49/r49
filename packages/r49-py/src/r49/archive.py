@@ -185,8 +185,11 @@ class R49Archive:
         folder or base URL ignores it as a dot path.
 
         :raises R49Error: ``archive/not-zip`` if a zip's file is damaged.
-        :raises OSError: if a path or URL cannot be read; that is no verdict on
-            an archive.
+        :raises OSError: if a path cannot be read; that is no verdict on an archive.
+        :raises Exception: from a base URL, any failure other than a 404 raises
+            something other than an ``R49Error``, such as an ``OSError``,
+            ``http.client.InvalidURL`` or ``UnicodeEncodeError``; that is no verdict
+            on an archive either.
         """
         return self._files.read(filename) if stays_in_archive(filename) else None
 
@@ -221,8 +224,11 @@ def load(source: bytes | str | os.PathLike[str]) -> R49Archive:
     damaged image in a zip is refused when it is read.
 
     :raises R49Error: naming the format rule the archive breaks.
-    :raises OSError: if a path or URL cannot be read; that is no verdict on an
-        archive.
+    :raises OSError: if a path cannot be read; that is no verdict on an archive.
+    :raises Exception: from a base URL, any failure other than a 404 raises
+        something other than an ``R49Error``, such as an ``OSError``,
+        ``http.client.InvalidURL`` or ``UnicodeEncodeError``; that is no verdict on
+        an archive either.
     """
     files = _files_of(source)
     manifest = files.read(MANIFEST_FILE)
