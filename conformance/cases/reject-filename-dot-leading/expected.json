@@ -1,0 +1,5 @@
+{
+  "description": "A filename whose first segment is exactly .: a zip and a folder would find different files at it.",
+  "result": "reject",
+  "rule": "manifest/filename"
+}

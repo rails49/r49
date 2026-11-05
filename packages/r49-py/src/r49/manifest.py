@@ -36,9 +36,10 @@ VALID_SCALES: Final[tuple[str, ...]] = tuple(SCALE_TO_RATIO)
 
 
 def stays_in_archive(filename: str) -> bool:
-    """Whether ``filename`` is one ``manifest/filename`` lets through. Only a whole
-    segment climbs: ``frame..jpg`` goes nowhere."""
-    return not filename.startswith("/") and ".." not in filename.split("/")
+    """Whether ``filename`` is one ``manifest/filename`` lets through: no segment is
+    empty, ``.`` or ``..``, which also refuses a leading ``/``. Only a whole segment
+    climbs: ``frame..jpg`` goes nowhere."""
+    return not any(segment in ("", ".", "..") for segment in filename.split("/"))
 
 
 def _whole(value: object) -> object:
@@ -220,7 +221,7 @@ class Image(_Strict):
         if not stays_in_archive(filename):
             raise PydanticCustomError(
                 "filename",
-                "filename {filename!r} is absolute or has a .. segment: "
+                "filename {filename!r} is absolute or has an empty, . or .. segment: "
                 "it must stay inside the archive",
                 {"filename": filename},
             )

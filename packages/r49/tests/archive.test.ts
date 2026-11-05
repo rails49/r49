@@ -274,10 +274,10 @@ describe('R49Archive', () => {
       expect(rejection(m).rule).toBe('manifest/schema');
     });
 
-    it('refuses to add an image at a filename that leaves the archive, and changes nothing', async () => {
+    it('refuses to add an image at a filename the format refuses, and changes nothing', async () => {
       const archive = new R49Archive();
       archive.setManifest(manifest());
-      for (const filename of ['/a.jpg', '../a.jpg', 'images/../a.jpg']) {
+      for (const filename of ['/a.jpg', '../a.jpg', 'images/../a.jpg', '', './a.jpg', 'a/./b.jpg', 'a//b.jpg', 'a/']) {
         await expect(archive.addImage(filename, new Uint8Array([1]))).rejects.toMatchObject({
           rule: 'manifest/filename',
         });

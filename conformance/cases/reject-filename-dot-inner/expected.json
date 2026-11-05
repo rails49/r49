@@ -1,0 +1,5 @@
+{
+  "description": "A filename with a . segment after its first, which is refused wherever it sits.",
+  "result": "reject",
+  "rule": "manifest/filename"
+}

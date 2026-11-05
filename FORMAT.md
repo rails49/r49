@@ -210,7 +210,7 @@ into (−π, π] as `wrapAngle`; `rails49-r49` names them `segment`, `point_at`,
 
 | Field | Type | Meaning |
 | :--- | :--- | :--- |
-| `filename` | string | The image's path in the archive, from its root. It does not start with `/` and no segment of it is exactly `..`; `frame..jpg` is valid. |
+| `filename` | string | The image's path in the archive, from its root. It does not start with `/` and no segment of it is empty, `.` or `..`; `frame..jpg` is valid. |
 | `labeled_complete` | boolean | Labeled complete: a person's assertion that no car in this image is unlabeled. An image marked complete with no labels is a valid all-background sample. Absent reads as `false`; nothing but a person sets it. |
 | `labels` | array of car label | The cars in this image. |
 
@@ -286,7 +286,7 @@ more than one rule, which one is reported is not specified.
 | `manifest/unknown-key` | an object holds a key this document does not define. |
 | `manifest/duplicate-id` | two sensors, or two labels in one image, share an `id`. |
 | `manifest/provenance` | a label's `provenance` is missing or not one of the three, or `proposed_by` is present on `human`, or missing or empty on `proposed` or `corrected`. |
-| `manifest/filename` | an image's `filename` starts with `/` or has a path segment that is exactly `..`, in a zip, a folder or a bare manifest. |
+| `manifest/filename` | an image's `filename` starts with `/` or has a path segment that is empty, `.` or `..`, in a zip, a folder or a bare manifest. |
 | `manifest/schema` | any other field is missing, has the wrong type or is out of range: no `scale`, an unknown scale name, an empty `id`, a `camera_height_mm` of 0 or below, a non-integer resolution, a track of one node or with two consecutive nodes at one position, a node with no `heading`, a track whose last click is `straight`, a number too large to be finite such as `1e999`. |
 
 Two rules are about the images, and a reader reports them instead of refusing
