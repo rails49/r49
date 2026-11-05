@@ -81,8 +81,10 @@ await archive.writeChanges({
 ```
 
 A base URL is read as `<base>/manifest.json` and `<base>/<filename>`, with each
-path segment percent-encoded. A 404 means the file is absent. Any other HTTP or
-network failure throws something other than an `R49Error`, because it is no
+path segment percent-encoded. It ignores a path with a segment that starts with a
+dot, as a folder does: `getImage` returns null and makes no request, and
+`addImage` throws `images/missing`. A 404 means the file is absent. Any other HTTP
+or network failure throws something other than an `R49Error`, because it is no
 verdict on the archive. A URL cannot be listed, so `listEntries()` is
 `manifest.json` and the names in the manifest, and `imageMismatches()` is empty.
 `export()` fetches each image it does not hold, and throws if one is missing.

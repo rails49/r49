@@ -121,6 +121,26 @@ describe('reading a URL archive', () => {
     expect(server!.requests).toEqual([]);
   });
 
+  it('returns absent, with no request, for a dot path', async () => {
+    const base = await served({
+      'manifest.json': manifest('.a.jpg'),
+      '.a.jpg': JPEG,
+      '.git/config': JPEG,
+      'shots/.DS_Store': JPEG,
+    });
+    const archive = await R49Archive.load(base);
+    server!.requests.length = 0;
+    expect(await archive.getImage('.git/config')).toBe(null);
+    expect(await archive.getImage('shots/.DS_Store')).toBe(null);
+    expect(await archive.getImage('.a.jpg')).toBe(null);
+    expect(server!.requests).toEqual([]);
+  });
+
+  it('keeps a manifest naming a dot path', async () => {
+    const archive = await R49Archive.load(await served({ 'manifest.json': manifest('.a.jpg') }));
+    expect(archive.getManifest().images[0].filename).toBe('.a.jpg');
+  });
+
   it('lists the manifest and the names in it, and reports no mismatch', async () => {
     const base = await served({ 'manifest.json': manifest('a.jpg', 'gone.jpg'), 'a.jpg': JPEG, stray: JPEG });
     const archive = await R49Archive.load(base);
@@ -154,6 +174,38 @@ describe('a name that leaves the archive, in a zip', () => {
     expect(await archive.getImage('x')).toEqual(JPEG);
     expect(await archive.getImage('../x')).toBe(null);
     expect(await archive.getImage('/x')).toBe(null);
+  });
+});
+
+describe('adding an image', () => {
+  const zipArchive = async () => {
+    const zip = new JSZip().file('manifest.json', manifest());
+    return await R49Archive.load(await zip.generateAsync({ type: 'uint8array' }));
+  };
+
+  it('refuses a name the format refuses, on a zip and on a URL archive', async () => {
+    for (const archive of [await zipArchive(), await R49Archive.load(await served({ 'manifest.json': manifest() }))]) {
+      for (const name of ['./a.jpg', 'a/./b.jpg', 'a//b.jpg', 'a/']) {
+        expect(((await thrown(() => archive.addImage(name, JPEG))) as R49Error).rule).toBe('manifest/filename');
+      }
+      expect(archive.getManifest().images).toEqual([]);
+    }
+  });
+
+  it('refuses a dot path on a URL archive, which would ignore it', async () => {
+    const archive = await R49Archive.load(await served({ 'manifest.json': manifest() }));
+    for (const name of ['.a.jpg', 'shots/.a.jpg']) {
+      expect(((await thrown(() => archive.addImage(name, JPEG))) as R49Error).rule).toBe('images/missing');
+    }
+    expect(archive.getManifest().images).toEqual([]);
+  });
+
+  it('accepts a dot path on a zip archive, which ignores nothing', async () => {
+    const archive = await zipArchive();
+    await archive.addImage('.a.jpg', JPEG);
+    expect(await archive.getImage('.a.jpg')).toEqual(JPEG);
+    const reloaded = await R49Archive.load(await archive.export());
+    expect(await reloaded.getImage('.a.jpg')).toEqual(JPEG);
   });
 });
 
@@ -389,6 +441,14 @@ describe('writeChanges', () => {
     server!.requests.length = 0;
     await archive.getImage('a.jpg');
     expect(server!.requests).toEqual(['a.jpg']);
+  });
+
+  it('never removes a dot path the manifest named, which the base ignores', async () => {
+    const archive = await R49Archive.load(await served({ 'manifest.json': manifest('.git/config') }));
+    archive.removeImage('.git/config');
+    const writer = recording();
+    await archive.writeChanges(writer);
+    expect(writer.calls).toEqual(['put manifest.json']);
   });
 
   it('never removes the manifest, even when an image entry names it', async () => {
