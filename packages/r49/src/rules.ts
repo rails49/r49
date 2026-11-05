@@ -48,7 +48,7 @@ export const FORMAT_RULES = [
  * submission can be refused on is defined in one place.
  */
 export const CORPUS_RULES = [
-  /** The path is not `archives/<handle>/<slug>.r49`. */
+  /** The path is not `archives/<handle>/<slug>.r49`, or is a file inside a folder of that name. */
   'path/shape',
   /** The filename is not a lowercase, hyphen-separated slug. */
   'path/slug',

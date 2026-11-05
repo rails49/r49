@@ -480,6 +480,23 @@ describe('validate', () => {
     });
   });
 
+  describe('a folder named *.r49', () => {
+    it('has its files refused under path/shape alone: a submission is a zip', async () => {
+      const zip = await build('archives/alice/west-yard.r49');
+      for (const input of [
+        { path: 'archives/alice/west-yard.r49/manifest.json', bytes: new TextEncoder().encode('{}') },
+        { path: 'archives/alice/west-yard.r49/img_0.jpg', bytes: A_JPEG },
+        { path: 'archives/alice/west-yard.r49/.gitkeep', bytes: new Uint8Array() },
+        // Even a file there that is a whole valid archive.
+        { path: 'archives/alice/west-yard.r49/inner.r49', bytes: zip.bytes },
+      ]) {
+        const result = await reportFor(input);
+        expect(result.scope).toBe('unknown');
+        expect(codes(result.errors)).toEqual(['path/shape']);
+      }
+    });
+  });
+
   describe('facts, which the summary table renders', () => {
     it('counts images, labels and completeness, and reports the residual', async () => {
       const result = await reportFor(

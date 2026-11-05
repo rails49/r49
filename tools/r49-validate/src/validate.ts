@@ -8,7 +8,7 @@ import {
   type Image,
   type ManifestData,
 } from '@rails49/r49';
-import { checkPath, scopeOf } from './corpus.ts';
+import { checkPath, insideFolderArchive, scopeOf } from './corpus.ts';
 import { obliquityOf, pointsOffReferencePlane } from './geometry.ts';
 import { RECOMMENDED_DPT } from './guidance.ts';
 import { isOk, type ArchiveReport, type Change, type Finding, type Report } from './report.ts';
@@ -415,6 +415,13 @@ export async function validate(
 
   for (const input of submitted) {
     const scope = scopeOf(input.path);
+
+    // One file of a folder is no archive, so its bytes say nothing about one,
+    // and load() would only report a jpeg as `archive/not-zip`.
+    if (insideFolderArchive(input.path)) {
+      reports.set(input.path, unloadable(input.path, checkPath(input.path, author)[0]));
+      continue;
+    }
 
     let archive: R49Archive;
     try {

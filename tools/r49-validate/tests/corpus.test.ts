@@ -36,6 +36,19 @@ describe('corpus paths', () => {
         'archives/bob/a b.r49',
       ]);
     });
+
+    it('lists every file inside a folder named *.r49, which is how a folder gets refused', () => {
+      const paths = [
+        'archives/alice/west.r49/manifest.json',
+        'archives/alice/west.r49/images/a.jpg',
+        'archives/alice/notes.txt',
+        'conformance/cases/x.r49/manifest.json',
+      ];
+      expect(corpusArchives(paths)).toEqual([
+        'archives/alice/west.r49/images/a.jpg',
+        'archives/alice/west.r49/manifest.json',
+      ]);
+    });
   });
 
   describe('scope', () => {
@@ -54,6 +67,11 @@ describe('corpus paths', () => {
       expect(scopeOf('archives/west-yard.r49')).toBe('unknown');
       expect(scopeOf('archives/alice/yard/west.r49')).toBe('unknown');
       expect(scopeOf('west-yard.r49')).toBe('unknown');
+    });
+
+    it('gives a file inside a folder named *.r49 no scope, at either depth', () => {
+      expect(scopeOf('archives/alice/west.r49/manifest.json')).toBe('unknown');
+      expect(scopeOf('archives/west.r49/manifest.json')).toBe('unknown');
     });
 
     it('names the contributor directory only for a real submission', () => {
@@ -92,6 +110,18 @@ describe('corpus paths', () => {
     it('reports one shape error, not a pile, for a path the layout has no place for', () => {
       const findings = checkPath('west-yard.r49', 'alice');
       expect(codes(findings)).toEqual(['path/shape']);
+    });
+
+    it('refuses a file inside a folder named *.r49, saying a submission is a zip', () => {
+      for (const path of [
+        'archives/alice/west.r49/manifest.json',
+        'archives/alice/west.r49/images/a.jpg',
+        'archives/west.r49/manifest.json',
+      ]) {
+        const findings = checkPath(path, 'alice');
+        expect(codes(findings)).toEqual(['path/shape']);
+        expect(findings[0].message).toContain('zip');
+      }
     });
 
     it('tolerates backslashes, which a Windows contributor’s tooling produces', () => {

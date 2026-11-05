@@ -41,7 +41,9 @@ format rules on purpose and are not submissions.
 
 `list` prints the corpus archives, each ending in NUL: every `.r49` under
 `archives/`, or, given paths, those of them in the corpus. The
-gate and the workflows take the corpus from it.
+gate and the workflows take the corpus from it. It also prints every file inside
+a folder named `*.r49`, so that the validator refuses each under `path/shape`: a
+submission is a zip.
 
 ```bash
 node tools/r49-validate/dist/cli.js list | xargs -0 node tools/r49-validate/dist/cli.js
