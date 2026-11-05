@@ -1,0 +1,6 @@
+{
+  "description": "A folder whose files other than its dot paths match the manifest. A folder ignores any path with a segment that starts with a dot, so .DS_Store, shots/.DS_Store and .hidden/notes.txt report no images/orphan.",
+  "result": "accept",
+  "dpt": null,
+  "residual": null
+}

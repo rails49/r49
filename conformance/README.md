@@ -13,6 +13,8 @@ Each directory under `cases/` is one case. It holds exactly one input:
 
 * `archive.r49`: archive bytes, to be loaded as an archive. They are not always
   a zip; some cases exist to be refused as `archive/empty` or `archive/not-zip`.
+  It may instead be a folder, an archive in that form: see
+  [The forms of an archive](#the-forms-of-an-archive).
 * `manifest.json`: a bare manifest, to be parsed on its own. FORMAT.md exempts
   a bare manifest from `archive/empty`, `archive/not-zip`, `archive/no-manifest`,
   `images/missing` and `images/orphan`. A runner whose implementation reads manifests only inside an
@@ -55,6 +57,26 @@ is not. Every format rule id has at least one case: a rejecting case, or for
 accepting case that reports it. Each rejecting case breaks exactly one rule,
 since FORMAT.md does not say which rule is reported when several are broken.
 
+### The forms of an archive
+
+A runner runs an `archive.r49` case in each form its implementation reads, and
+every form agrees:
+
+* A zip, or a folder, as the case holds it.
+* A readable zip unpacked as a folder. So a zip case holds no dot path, which a
+  zip reports and a folder ignores.
+* Over a local HTTP server, from a base URL: a readable zip unpacked, or a
+  folder. FORMAT.md exempts a URL from `images/missing` and `images/orphan`, so
+  over a URL `image_mismatches` is not checked.
+
+A zip that is not readable, one a case expects refused as `archive/empty` or
+`archive/not-zip`, runs as a zip only. A folder case does not run as a zip: a dot
+path it holds would be an orphan there.
+
+The TypeScript runner runs each readable zip as a zip and over a URL, and each
+folder over a URL, as `@rails49/r49` reads a folder only through its base URL.
+The Python runner runs every form.
+
 ### A track case
 
 Its `expected.json`:
@@ -88,7 +110,8 @@ case's `description`, never from an implementation's output.
 ## The cases
 
 The names say what each is about: `accept-*`; `reject-*`, named after the rule
-broken; `images-*` for an archive that loads and reports an image mismatch;
+broken; `images-*` for an archive that loads and reports an image mismatch, with
+`-folder` in the name where its `archive.r49` is a folder;
 `fit-*` for the calibration fit; `height-*` for the fit with a camera
 height; and the track cases, `curve-*` for points on the curve between nodes
 and `nearest-*` for the nearest point on a track.

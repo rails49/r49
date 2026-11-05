@@ -3,28 +3,66 @@ import { expect } from '../../../scripts/test/expect.ts';
 import { fileURLToPath } from 'node:url';
 import { FORMAT_RULES, R49Archive, getDPT, getDPTResidual } from './r49.ts';
 import type { ManifestData } from '../src/index.ts';
-import type { ArchiveExpected, TrackExpected } from './conformance.ts';
-import { disagreements, judge, judgeArchive, readCases, trackDisagreements } from './conformance.ts';
+import type { ArchiveExpected, Files, TrackExpected } from './conformance.ts';
+import {
+  disagreements,
+  isReadableZip,
+  judge,
+  judgeArchive,
+  readCases,
+  trackDisagreements,
+  unpack,
+  withoutImageMismatches,
+} from './conformance.ts';
+import { serve } from './http-server.ts';
 
 /**
  * Every case in `conformance/cases/`, run through this package. Cases assert
  * an outcome — accept or reject, the rule id, DPT, residual and image
  * mismatches — and never a message: the id is the contract, the wording is not.
+ * This package reads a folder only through its base URL, so a folder case runs
+ * over a local HTTP server, and so does each readable zip case, unpacked.
  */
 
 const CASES = fileURLToPath(new URL('../../../conformance/cases/', import.meta.url));
 const cases = readCases(CASES);
 
+async function disagreementsOverUrl(expected: ArchiveExpected, files: Files): Promise<string[]> {
+  const server = await serve(files);
+  try {
+    return disagreements(withoutImageMismatches(expected), await judgeArchive(server.url));
+  } finally {
+    await server.close();
+  }
+}
+
 describe('conformance cases', () => {
   for (const c of cases) {
+    const { input } = c;
+    if (input.kind === 'folder') {
+      it(`${c.name}, over a URL`, async () => {
+        expect(await disagreementsOverUrl(c.expected as ArchiveExpected, input.files)).toEqual([]);
+      });
+      continue;
+    }
     it(c.name, async () => {
-      if (c.input.kind === 'track') {
-        expect(trackDisagreements(c.expected as TrackExpected, c.input.tracks)).toEqual([]);
+      if (input.kind === 'track') {
+        expect(trackDisagreements(c.expected as TrackExpected, input.tracks)).toEqual([]);
       } else {
-        expect(disagreements(c.expected as ArchiveExpected, await judge(c.input))).toEqual([]);
+        expect(disagreements(c.expected as ArchiveExpected, await judge(input))).toEqual([]);
       }
     });
+    if (input.kind === 'archive' && isReadableZip(c)) {
+      it(`${c.name}, over a URL`, async () => {
+        expect(await disagreementsOverUrl(c.expected as ArchiveExpected, await unpack(input.bytes))).toEqual([]);
+      });
+    }
   }
+
+  it('hold a folder case and a readable zip case', () => {
+    expect(cases.some(c => c.input.kind === 'folder')).toBe(true);
+    expect(cases.some(isReadableZip)).toBe(true);
+  });
 
   const verdicts = cases.flatMap(c => (c.input.kind === 'track' ? [] : [c.expected as ArchiveExpected]));
   const rejected = new Set(verdicts.flatMap(e => (e.result === 'reject' ? [e.rule] : [])));

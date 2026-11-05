@@ -1,0 +1,10 @@
+{
+  "description": "A folder holding .a.jpg, which its manifest names. A folder ignores a dot path, so the image is missing.",
+  "result": "accept",
+  "image_mismatches": [
+    {
+      "rule": "images/missing",
+      "filename": ".a.jpg"
+    }
+  ]
+}
