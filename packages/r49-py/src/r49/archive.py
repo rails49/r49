@@ -22,6 +22,12 @@ _HTTP_TIMEOUT_SECONDS = 60
 _UNREADABLE_ZIP = (zipfile.BadZipFile, zlib.error, EOFError, NotImplementedError, RuntimeError)
 
 
+def _is_dot_path(name: str) -> bool:
+    """Whether a segment of ``name`` starts with a dot, which a folder and a base URL
+    ignore."""
+    return any(segment.startswith(".") for segment in name.split("/"))
+
+
 class _Files(Protocol):
     """Where an archive's files come from. Holds nothing open between calls."""
 
@@ -78,7 +84,7 @@ class _Folder:
         self._root = root
 
     def read(self, name: str) -> bytes | None:
-        if any(not part or part.startswith(".") for part in name.split("/")):
+        if _is_dot_path(name):
             return None
         try:
             return (self._root / name).read_bytes()
@@ -98,18 +104,17 @@ class _Folder:
 
 
 class _Url:
-    """A base URL, read one request at a time. A 404 is an absent file; any other
-    failure raises, as it says nothing about the archive."""
+    """A base URL, read one request at a time, which ignores a dot path as a folder
+    does. A 404 is an absent file; any other failure raises, as it says nothing about
+    the archive."""
 
     def __init__(self, base: str) -> None:
         self._base = base.rstrip("/")
 
     def read(self, name: str) -> bytes | None:
-        segments = name.split("/")
-        # A client or server would resolve these to some other path.
-        if any(segment in ("", ".") for segment in segments):
+        if _is_dot_path(name):
             return None
-        path = "/".join(urllib.parse.quote(segment, safe="") for segment in segments)
+        path = "/".join(urllib.parse.quote(segment, safe="") for segment in name.split("/"))
         try:
             with urllib.request.urlopen(
                 f"{self._base}/{path}", timeout=_HTTP_TIMEOUT_SECONDS
@@ -150,7 +155,8 @@ class R49Archive:
 
     def image(self, filename: str) -> bytes | None:
         """The bytes of the file at ``filename``, inflating or fetching only that
-        file, or None when the archive has none or the name would leave it.
+        file, or None when the archive has none, the name would leave it, or a
+        folder or base URL ignores it as a dot path.
 
         :raises R49Error: ``archive/not-zip`` if a zip's file is damaged.
         :raises OSError: if a path or URL cannot be read; that is no verdict on
