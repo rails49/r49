@@ -1,7 +1,8 @@
 # @rails49/r49
 
-Reads and writes `.r49` railroad layout archives — a zip holding a
-`manifest.json` plus the layout photographs it describes. The format is defined
+Reads and writes `.r49` railroad layout archives — a zip or a folder holding a
+`manifest.json` plus the layout photographs it describes. A zip is held whole in
+memory; a folder is read one file at a time, through its base URL. The format is defined
 in [FORMAT.md](https://github.com/rails49/r49/blob/main/FORMAT.md); this package is
 one implementation of it, and the
 [conformance cases](https://github.com/rails49/r49/tree/main/conformance) are how
@@ -65,6 +66,30 @@ The manifest returned by `getManifest()` is live — mutating it changes what
 manifest wholesale.
 
 Only v4 is supported. Earlier archives are not readable.
+
+### A base URL
+
+```typescript
+const archive = await R49Archive.load('https://example.org/archives/layout.r49/');
+const jpeg = await archive.getImage(archive.getManifest().images[0].filename);
+
+await archive.addImage('new-shot.jpg', bytes);
+await archive.writeChanges({
+  put: async (name, bytes) => { /* PUT to <base>/<name> */ },
+  remove: async name => { /* DELETE <base>/<name> */ },
+});
+```
+
+A base URL is read as `<base>/manifest.json` and `<base>/<filename>`, with each
+path segment percent-encoded. A 404 means the file is absent. Any other HTTP or
+network failure throws something other than an `R49Error`, because it is no
+verdict on the archive. A URL cannot be listed, so `listEntries()` is
+`manifest.json` and the names in the manifest, and `imageMismatches()` is empty.
+`export()` fetches each image it does not hold, and throws if one is missing.
+
+`writeChanges` writes the added images, then the manifest, then the removals, and
+holds no image it has written. The next call after a rejected `put` or `remove`
+writes what is still unwritten. It throws on a zip, which `export()` writes.
 
 ## Licence
 
