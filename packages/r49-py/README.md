@@ -51,13 +51,14 @@ and image rules.
 
 `load` reads the manifest and no image, and the archive keeps no file open, so
 there is nothing to close. `image` returns bytes, or `None` when the file is
-absent or its name would leave the archive. A damaged image in a zip raises
-`archive/not-zip` when it is read.
+absent, its name would leave the archive, or a folder or base URL ignores it. A
+damaged image in a zip raises `archive/not-zip` when it is read.
 
 A base URL is read as `<base>/manifest.json` and `<base>/<filename>`, with each
-path segment percent-encoded. A 404 means the file is absent. Any other HTTP or
-network failure raises an `OSError`, not an `R49Error`, because it is no verdict
-on the archive. A URL cannot be listed, so `entries()` is `manifest.json` and the
+path segment percent-encoded. It ignores a path with a segment that starts with a
+dot, as a folder does: `image` returns `None` and makes no request. A 404 means
+the file is absent. Any other HTTP or network failure raises an `OSError`, not an
+`R49Error`, because it is no verdict on the archive. A URL cannot be listed, so `entries()` is `manifest.json` and the
 names in the manifest, and `image_mismatches()` is empty.
 
 A car label's `class` is `class_` in Python; the manifest key stays `class`.

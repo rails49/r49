@@ -13,14 +13,20 @@ from urllib.parse import unquote
 
 
 class _Handler(SimpleHTTPRequestHandler):
-    """Serves a directory, answering 500 for the paths in ``failing``."""
+    """Serves a directory, answering 500 for the paths in ``failing`` and adding each
+    path requested, decoded, to ``requests``."""
 
-    def __init__(self, *args: Any, failing: frozenset[str], **kwargs: Any) -> None:
+    def __init__(
+        self, *args: Any, failing: frozenset[str], requests: list[str], **kwargs: Any
+    ) -> None:
         self.failing = failing
+        self.requests = requests
         super().__init__(*args, **kwargs)
 
     def do_GET(self) -> None:
-        if unquote(self.path).lstrip("/") in self.failing:
+        path = unquote(self.path).lstrip("/")
+        self.requests.append(path)
+        if path in self.failing:
             self.send_error(500)
         else:
             super().do_GET()
@@ -30,9 +36,15 @@ class _Handler(SimpleHTTPRequestHandler):
 
 
 @contextmanager
-def served(root: Path, *failing: str) -> Generator[str]:
-    """The base URL of ``root``, served until the block ends."""
-    handler = partial(_Handler, directory=str(root), failing=frozenset(failing))
+def served(root: Path, *failing: str, requests: list[str] | None = None) -> Generator[str]:
+    """The base URL of ``root``, served until the block ends. ``requests``, if given,
+    collects each path requested."""
+    handler = partial(
+        _Handler,
+        directory=str(root),
+        failing=frozenset(failing),
+        requests=[] if requests is None else requests,
+    )
     server = ThreadingHTTPServer(("127.0.0.1", 0), handler)
     thread = Thread(target=server.serve_forever, daemon=True)
     thread.start()

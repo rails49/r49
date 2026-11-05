@@ -364,6 +364,26 @@ class TestUrl:
             assert archive.image("./manifest.json") is None
             assert archive.image("shots/") is None
 
+    def test_a_dot_path_is_absent_with_no_request(self, tmp_path: Path) -> None:
+        files = {
+            "manifest.json": layout_manifest(".a.jpg"),
+            ".a.jpg": JPEG,
+            ".git/config": JPEG,
+            "shots/.DS_Store": JPEG,
+        }
+        requests: list[str] = []
+        with served(folder(tmp_path, files), requests=requests) as base:
+            archive = r49.load(base)
+            requests.clear()
+            assert archive.image(".git/config") is None
+            assert archive.image("shots/.DS_Store") is None
+            assert archive.image(".a.jpg") is None
+        assert requests == []
+
+    def test_a_manifest_naming_a_dot_path_still_loads(self, tmp_path: Path) -> None:
+        with served(folder(tmp_path, {"manifest.json": layout_manifest(".a.jpg")})) as base:
+            assert r49.load(base).manifest.images[0].filename == ".a.jpg"
+
     def test_lists_the_names_in_the_manifest_and_reports_no_mismatch(self, tmp_path: Path) -> None:
         files = {"manifest.json": layout_manifest("a.jpg", "gone.jpg"), "a.jpg": JPEG, "b": JPEG}
         with served(folder(tmp_path, files)) as base:
