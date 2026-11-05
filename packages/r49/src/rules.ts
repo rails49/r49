@@ -31,7 +31,7 @@ export const FORMAT_RULES = [
   'manifest/duplicate-id',
   /** A label's `provenance` is absent or unknown, or `proposed_by` contradicts it. */
   'manifest/provenance',
-  /** An image's `filename` starts with `/` or has a segment that is exactly `..`. */
+  /** An image's `filename` starts with `/` or has a segment that is empty, `.` or `..`. */
   'manifest/filename',
   /** Any other shape the format does not allow: a missing scale, a wrong type, an empty id. */
   'manifest/schema',

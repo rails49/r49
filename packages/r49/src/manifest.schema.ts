@@ -460,18 +460,18 @@ const sensorIds = uniqueIds<z.infer<typeof SensorSchema>>('sensor');
 const labelIds = uniqueIds<z.infer<typeof CarLabelSchema>>('label');
 
 /**
- * Whether a `filename` stays inside the archive: it does not start with `/`,
- * and no segment is exactly `..`. Two dots elsewhere, as in `frame..jpg`, climb
+ * Whether a `filename` stays inside the archive: no segment is empty, `.` or `..`,
+ * which also refuses a leading `/`. Two dots elsewhere, as in `frame..jpg`, climb
  * nowhere.
  */
 export function staysInArchive(filename: string): boolean {
-  return !filename.startsWith('/') && !filename.split('/').includes('..');
+  return !filename.split('/').some(segment => segment === '' || segment === '.' || segment === '..');
 }
 
 const ImageSchema = z
   .object({
     filename: z.string().refine(staysInArchive, {
-      message: 'filename is absolute or has a .. segment: it must stay inside the archive',
+      message: 'filename is absolute or has an empty, . or .. segment: it must stay inside the archive',
       params: { rule: 'manifest/filename' satisfies FormatRule },
     }),
     /**

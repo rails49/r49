@@ -1,0 +1,5 @@
+{
+  "description": "A filename with an empty segment between two others.",
+  "result": "reject",
+  "rule": "manifest/filename"
+}

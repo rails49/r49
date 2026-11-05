@@ -1,0 +1,5 @@
+{
+  "description": "A filename that ends in /: its last segment is empty, so it names no file.",
+  "result": "reject",
+  "rule": "manifest/filename"
+}
