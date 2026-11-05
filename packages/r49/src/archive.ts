@@ -27,16 +27,20 @@ interface UrlBase {
   removed: Set<string>;
 }
 
+/** Whether a segment of `name` starts with a dot, which a base URL ignores. */
+function isDotPath(name: string): boolean {
+  return name.split('/').some(segment => segment.startsWith('.'));
+}
+
 /**
- * The bytes at `<base>/<name>`, each segment percent-encoded, or null for a 404.
+ * The bytes at `<base>/<name>`, each segment percent-encoded, or null for a 404
+ * or a dot path, which makes no request.
  * Any other failure throws something other than an {@link R49Error}: it is no
  * verdict on the archive.
  */
 async function fetchFile(base: string, name: string): Promise<Uint8Array | null> {
-  const segments = name.split('/');
-  // A URL would resolve these to some other path.
-  if (segments.some(segment => segment === '' || segment === '.')) return null;
-  const url = `${base}/${segments.map(encodeURIComponent).join('/')}`;
+  if (isDotPath(name)) return null;
+  const url = `${base}/${name.split('/').map(encodeURIComponent).join('/')}`;
   const response = await fetch(url);
   if (response.status === 404) return null;
   if (!response.ok) throw new Error(`Failed to read ${url}: HTTP ${response.status}`);
@@ -135,7 +139,7 @@ export class R49Archive {
     }
     assertManifestVersion(json);
     this.manifest = parseManifest(json);
-    if (this.url) this.url.images = this.namedImages();
+    if (this.url) this.url.images = new Set([...this.namedImages()].filter(name => !isDotPath(name)));
     return this.manifest;
   }
 
@@ -195,8 +199,8 @@ export class R49Archive {
 
   /**
    * Reads an image from the archive by its manifest filename. A URL archive
-   * returns an image added and not yet written, does not fetch one removed, and
-   * fetches any other.
+   * returns an image added and not yet written, does not fetch one removed or a
+   * dot path, and fetches any other.
    *
    * @returns The image bytes, or null if no such entry exists or the name is one
    *          `manifest/filename` refuses.
@@ -270,11 +274,15 @@ export class R49Archive {
    * overwrites the bytes and leaves the manifest entry (and its labels) intact.
    *
    * @throws An {@link R49Error} naming `manifest/filename` for a filename that
-   *         does not stay inside the archive, which no reader would load back.
+   *         does not stay inside the archive, which no reader would load back, or
+   *         `images/missing` for a dot path on a URL archive, which ignores it.
    */
   async addImage(filename: string, data: Uint8Array | Buffer | Blob | ArrayBuffer): Promise<void> {
     if (!staysInArchive(filename)) {
       throw new R49Error('manifest/filename', `${filename} does not stay inside the archive`);
+    }
+    if (this.url && isDotPath(filename)) {
+      throw new R49Error('images/missing', `A base URL ignores ${filename}, which has a segment that starts with a dot`);
     }
     this.zip.file(filename, data);
     this.url?.removed.delete(filename);
