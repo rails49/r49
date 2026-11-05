@@ -1,0 +1,6 @@
+{
+  "description": "frame..jpg has two dots in a row, but no segment that is exactly .., so it is valid.",
+  "result": "accept",
+  "dpt": null,
+  "residual": null
+}

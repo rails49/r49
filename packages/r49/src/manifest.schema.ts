@@ -459,9 +459,21 @@ function uniqueIds<T extends { id: string }>(kind: string) {
 const sensorIds = uniqueIds<z.infer<typeof SensorSchema>>('sensor');
 const labelIds = uniqueIds<z.infer<typeof CarLabelSchema>>('label');
 
+/**
+ * Whether a `filename` stays inside the archive: it does not start with `/`,
+ * and no segment is exactly `..`. Two dots elsewhere, as in `frame..jpg`, climb
+ * nowhere.
+ */
+export function staysInArchive(filename: string): boolean {
+  return !filename.startsWith('/') && !filename.split('/').includes('..');
+}
+
 const ImageSchema = z
   .object({
-    filename: z.string(),
+    filename: z.string().refine(staysInArchive, {
+      message: 'filename is absolute or has a .. segment: it must stay inside the archive',
+      params: { rule: 'manifest/filename' satisfies FormatRule },
+    }),
     /**
      * A human asserts that no car in this image is unlabeled. Defaults to
      * `false` unconditionally — that is a claim no default and no conversion can
@@ -590,12 +602,12 @@ function unknownKeyPaths(err: z.ZodError): string[] {
  * missing or unknown discriminator, a forbidden `proposed_by` and a missing one
  * as three different codes, and all three are the one rule. The duplicate-id
  * refinement names its rule in its params, since a custom issue carries nothing
- * else to tell it from any future refinement.
+ * else to tell it from any future refinement, and so does the filename one.
  */
 function ruleOf(err: z.ZodError): FormatRule {
   const issue = err.issues[0];
-  if (issue.code === 'custom' && issue.params?.rule === 'manifest/duplicate-id') {
-    return 'manifest/duplicate-id';
+  if (issue.code === 'custom' && issue.params?.rule !== undefined) {
+    return issue.params.rule as FormatRule;
   }
   const field = issue.path[issue.path.length - 1];
   if (issue.path.includes('labels') && (field === 'provenance' || field === 'proposed_by')) {
