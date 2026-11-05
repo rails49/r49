@@ -215,9 +215,10 @@ class R49Archive:
 
 def load(source: bytes | str | os.PathLike[str]) -> R49Archive:
     """Load an archive from a zip's bytes or path, a folder's path, or an
-    ``http://`` or ``https://`` base URL, applying every format rule but the two
-    image rules, which :meth:`R49Archive.image_mismatches` reports. Reads the
-    manifest and no image: a damaged image in a zip is refused when it is read.
+    ``http://`` or ``https://`` base URL, with its scheme in any case, applying
+    every format rule but the two image rules, which
+    :meth:`R49Archive.image_mismatches` reports. Reads the manifest and no image: a
+    damaged image in a zip is refused when it is read.
 
     :raises R49Error: naming the format rule the archive breaks.
     :raises OSError: if a path or URL cannot be read; that is no verdict on an
@@ -231,7 +232,7 @@ def load(source: bytes | str | os.PathLike[str]) -> R49Archive:
 
 
 def _files_of(source: bytes | str | os.PathLike[str]) -> _Files:
-    if isinstance(source, str) and source.startswith(("http://", "https://")):
+    if isinstance(source, str) and source.lower().startswith(("http://", "https://")):
         return _Url(source)
     if isinstance(source, bytes):
         size = len(source)

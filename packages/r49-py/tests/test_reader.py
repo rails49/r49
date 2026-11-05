@@ -381,6 +381,19 @@ class TestUrl:
             for source in (base, f"{base}/"):
                 assert r49.load(source).image("a.jpg") == JPEG
 
+    def test_reads_a_scheme_in_any_case(self, tmp_path: Path) -> None:
+        root = folder(tmp_path, {"manifest.json": layout_manifest("a.jpg"), "a.jpg": JPEG})
+        with served(root) as base:
+            for scheme in ("HTTP://", "Http://"):
+                assert r49.load(base.replace("http://", scheme)).image("a.jpg") == JPEG
+
+    def test_takes_https_in_capitals_for_a_url(self, tmp_path: Path) -> None:
+        with served(tmp_path) as base:
+            pass
+        # Nothing listens there. As a file path, it would raise FileNotFoundError.
+        with pytest.raises(urllib.error.URLError):
+            r49.load(base.replace("http://", "HTTPS://"))
+
     def test_reads_a_base_below_the_root_of_the_server(self, tmp_path: Path) -> None:
         folder(tmp_path / "x/layout.r49", {"manifest.json": layout_manifest(), "a.jpg": JPEG})
         with served(tmp_path) as base:
