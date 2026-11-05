@@ -14,6 +14,12 @@ _Avoid_: scene
 A `.r49` zip or folder holding one layout's images, calibration, sensors and car labels. See [FORMAT § The archive](FORMAT.md#the-archive).
 _Avoid_: project, dataset
 
+**Base URL**:
+The URL an archive's files are read from, as `<base>/manifest.json` and `<base>/<filename>`. An archive read this way is a URL archive. See [FORMAT § Format rules](FORMAT.md#format-rules).
+
+**Dot path**:
+A path with a segment that starts with a dot. A folder and a base URL ignore it. A zip does not. See [FORMAT § The archive](FORMAT.md#the-archive).
+
 **Format**:
 The rules every archive follows, independent of any program that reads or writes one. See [FORMAT.md](FORMAT.md).
 _Avoid_: schema (for the rules themselves)

@@ -309,6 +309,10 @@ a URL cannot be listed, and checking every image takes one request each. A 404
 means the file is absent, so no manifest is `archive/no-manifest`. Any other HTTP
 or network failure is no verdict on the archive and reports no rule.
 
+It ignores a path with a segment that starts with a dot, as a folder does, so the
+file is absent and the reader makes no request for it. `manifest.json` is
+unaffected. A manifest that names such a path still passes `manifest/filename`.
+
 ## Scales and gauge
 
 The prototype's standard gauge is **1435 mm**. A model's track gauge in mm is
