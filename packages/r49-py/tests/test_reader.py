@@ -1,16 +1,20 @@
-"""The reader beyond what a conformance case asserts: loading from a path, the
-bytes it hands back, the image mismatches in order, the whole fit result and
-the vocabulary questions."""
+"""The reader beyond what a conformance case asserts: loading from a path, a
+folder or a URL, the bytes it hands back, the image mismatches in order, the
+whole fit result and the vocabulary questions."""
 
 from __future__ import annotations
 
 import io
 import json
+import os
+import tracemalloc
+import urllib.error
 import zipfile
 from pathlib import Path
 from typing import Any
 
 import pytest
+from http_server import served
 
 import r49
 
@@ -137,6 +141,235 @@ class TestLoad:
         }
         read = manifest(images=[{"filename": "a.jpg", "labels": [label]}]).images[0].labels[0]
         assert (read.class_, read.provenance, read.proposed_by) == ("stock.loco", "corrected", "v1")
+
+
+def layout_manifest(*filenames: str) -> bytes:
+    return json.dumps(
+        {
+            "version": 4,
+            "layout": {"scale": "N"},
+            "camera": {"resolution": {"width": 4, "height": 3}},
+            "images": [{"filename": name} for name in filenames],
+        }
+    ).encode()
+
+
+def folder(root: Path, files: dict[str, bytes]) -> Path:
+    for name, data in files.items():
+        path = root / name
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_bytes(data)
+    return root
+
+
+def damaged(data: bytes, name: str) -> bytes:
+    """A zip with the stored bytes of ``name`` changed, its directory intact."""
+    with zipfile.ZipFile(io.BytesIO(data)) as zf:
+        info = zf.getinfo(name)
+    start = info.header_offset + 30 + len(info.filename.encode()) + len(info.extra)
+    return data[:start] + bytes(b ^ 0xFF for b in data[start : start + 4]) + data[start + 4 :]
+
+
+class TestZip:
+    def test_opens_a_zip_larger_than_the_images_it_reads(self, tmp_path: Path) -> None:
+        size = 8 * 1024 * 1024
+        path = tmp_path / "large.r49"
+        path.write_bytes(
+            zipped(
+                {
+                    "manifest.json": layout_manifest("small.jpg", "large.jpg"),
+                    "small.jpg": JPEG,
+                    "large.jpg": os.urandom(size),
+                }
+            )
+        )
+        tracemalloc.start()
+        try:
+            archive = r49.load(path)
+            image = archive.image("small.jpg")
+            mismatches = archive.image_mismatches()
+            _, peak = tracemalloc.get_traced_memory()
+        finally:
+            tracemalloc.stop()
+        assert image == JPEG
+        assert mismatches == []
+        assert peak < size / 4
+
+    def test_inflates_only_the_file_asked_for(self) -> None:
+        data = zipped(
+            {
+                "manifest.json": layout_manifest("good.jpg", "bad.jpg"),
+                "good.jpg": JPEG,
+                "bad.jpg": JPEG * 100,
+            }
+        )
+        archive = r49.load(damaged(data, "bad.jpg"))
+        assert archive.image("good.jpg") == JPEG
+
+    def test_refuses_a_damaged_image_when_it_is_read(self, tmp_path: Path) -> None:
+        data = damaged(
+            zipped({"manifest.json": layout_manifest("bad.jpg"), "bad.jpg": JPEG * 100}), "bad.jpg"
+        )
+        path = tmp_path / "damaged.r49"
+        path.write_bytes(data)
+        for source in (data, path):
+            archive = r49.load(source)
+            with pytest.raises(r49.R49Error) as refused:
+                archive.image("bad.jpg")
+            assert refused.value.rule == "archive/not-zip"
+
+    def test_refuses_a_damaged_manifest_on_load(self) -> None:
+        data = damaged(zipped({"manifest.json": layout_manifest()}), "manifest.json")
+        with pytest.raises(r49.R49Error) as refused:
+            r49.load(data)
+        assert refused.value.rule == "archive/not-zip"
+
+    def test_refuses_an_encrypted_image_on_load(self) -> None:
+        data = bytearray(zipped({"manifest.json": layout_manifest("a.jpg"), "a.jpg": JPEG}))
+        # The central directory's general purpose flags for the second entry.
+        first = data.index(b"PK\x01\x02")
+        data[data.index(b"PK\x01\x02", first + 4) + 8] |= 1
+        with pytest.raises(r49.R49Error) as refused:
+            r49.load(bytes(data))
+        assert refused.value.rule == "archive/not-zip"
+
+    def test_refuses_an_empty_file_at_a_path(self, tmp_path: Path) -> None:
+        path = tmp_path / "empty.r49"
+        path.write_bytes(b"")
+        with pytest.raises(r49.R49Error) as refused:
+            r49.load(path)
+        assert refused.value.rule == "archive/empty"
+
+    def test_ignores_nothing_so_a_dot_file_is_an_orphan(self) -> None:
+        archive = r49.load(zipped({"manifest.json": layout_manifest(), ".DS_Store": b"x"}))
+        assert archive.image_mismatches() == [r49.ImageMismatch("images/orphan", ".DS_Store")]
+        assert archive.image(".DS_Store") == b"x"
+
+    def test_a_name_that_leaves_the_archive_is_absent_even_if_the_zip_holds_it(self) -> None:
+        archive = r49.load(zipped({"manifest.json": layout_manifest(), "../x": JPEG, "/y": JPEG}))
+        assert archive.image("../x") is None
+        assert archive.image("/y") is None
+        assert archive.image("shots/../../x") is None
+
+
+class TestFolder:
+    FILES = {
+        "manifest.json": layout_manifest("shots/a.jpg"),
+        "shots/a.jpg": JPEG,
+        "shots/.DS_Store": b"x",
+        ".DS_Store": b"x",
+        ".hidden/notes.txt": b"x",
+    }
+
+    def test_reads_a_directory_given_as_a_path_or_a_string(self, tmp_path: Path) -> None:
+        root = folder(tmp_path / "layout.r49", self.FILES)
+        for source in (root, str(root)):
+            archive = r49.load(source)
+            assert archive.image("shots/a.jpg") == JPEG
+            assert archive.image("absent.jpg") is None
+
+    def test_lists_files_and_ignores_every_dot_path(self, tmp_path: Path) -> None:
+        archive = r49.load(folder(tmp_path / "layout.r49", self.FILES))
+        assert archive.entries() == ["manifest.json", "shots/a.jpg"]
+        assert archive.image_mismatches() == []
+
+    def test_reads_no_file_under_a_dot_path(self, tmp_path: Path) -> None:
+        archive = r49.load(folder(tmp_path / "layout.r49", self.FILES))
+        assert archive.image(".DS_Store") is None
+        assert archive.image("shots/.DS_Store") is None
+        assert archive.image(".hidden/notes.txt") is None
+        assert archive.image("./shots/a.jpg") is None
+
+    def test_a_name_that_leaves_the_archive_is_absent(self, tmp_path: Path) -> None:
+        (tmp_path / "x").write_bytes(JPEG)
+        archive = r49.load(folder(tmp_path / "layout.r49", self.FILES))
+        assert archive.image("../x") is None
+        assert archive.image(str(tmp_path / "x")) is None
+
+    def test_a_directory_or_a_path_through_a_file_is_absent(self, tmp_path: Path) -> None:
+        archive = r49.load(folder(tmp_path / "layout.r49", self.FILES))
+        assert archive.image("shots") is None
+        assert archive.image("shots/") is None
+        assert archive.image("") is None
+        assert archive.image("shots/a.jpg/x") is None
+        assert archive.image("shots//a.jpg") is None
+
+    def test_a_manifest_naming_a_dot_path_reports_it_missing(self, tmp_path: Path) -> None:
+        files = {"manifest.json": layout_manifest(".a.jpg"), ".a.jpg": JPEG}
+        archive = r49.load(folder(tmp_path / "layout.r49", files))
+        assert archive.image_mismatches() == [r49.ImageMismatch("images/missing", ".a.jpg")]
+
+    def test_refuses_a_folder_with_no_manifest(self, tmp_path: Path) -> None:
+        with pytest.raises(r49.R49Error) as refused:
+            r49.load(folder(tmp_path / "layout.r49", {"a.jpg": JPEG}))
+        assert refused.value.rule == "archive/no-manifest"
+
+
+class TestUrl:
+    def test_reads_a_base_with_or_without_a_trailing_slash(self, tmp_path: Path) -> None:
+        root = folder(tmp_path, {"manifest.json": layout_manifest("a.jpg"), "a.jpg": JPEG})
+        with served(root) as base:
+            for source in (base, f"{base}/"):
+                assert r49.load(source).image("a.jpg") == JPEG
+
+    def test_reads_a_base_below_the_root_of_the_server(self, tmp_path: Path) -> None:
+        folder(tmp_path / "x/layout.r49", {"manifest.json": layout_manifest(), "a.jpg": JPEG})
+        with served(tmp_path) as base:
+            assert r49.load(f"{base}/x/layout.r49").image("a.jpg") == JPEG
+
+    def test_encodes_each_path_segment(self, tmp_path: Path) -> None:
+        name = "my shots/a #1?100%é.jpg"
+        root = folder(tmp_path, {"manifest.json": layout_manifest(name), name: JPEG})
+        with served(root) as base:
+            assert r49.load(base).image(name) == JPEG
+
+    def test_a_404_is_an_absent_file(self, tmp_path: Path) -> None:
+        with served(folder(tmp_path, {"manifest.json": layout_manifest()})) as base:
+            assert r49.load(base).image("absent.jpg") is None
+
+    def test_no_manifest_is_refused(self, tmp_path: Path) -> None:
+        with served(folder(tmp_path, {"a.jpg": JPEG})) as base:
+            with pytest.raises(r49.R49Error) as refused:
+                r49.load(base)
+        assert refused.value.rule == "archive/no-manifest"
+
+    def test_a_500_is_no_verdict_on_the_archive(self, tmp_path: Path) -> None:
+        root = folder(tmp_path, {"manifest.json": layout_manifest("a.jpg"), "a.jpg": JPEG})
+        with served(root, "a.jpg") as base:
+            archive = r49.load(base)
+            with pytest.raises(urllib.error.HTTPError):
+                archive.image("a.jpg")
+        with served(root, "manifest.json") as base:
+            with pytest.raises(urllib.error.HTTPError):
+                r49.load(base)
+
+    def test_a_network_failure_is_no_verdict_on_the_archive(self, tmp_path: Path) -> None:
+        with served(tmp_path) as base:
+            pass
+        with pytest.raises(OSError):
+            r49.load(base)
+
+    def test_a_name_that_leaves_the_archive_is_absent(self, tmp_path: Path) -> None:
+        folder(tmp_path / "layout.r49", {"manifest.json": layout_manifest()})
+        (tmp_path / "x").write_bytes(JPEG)
+        with served(tmp_path) as base:
+            archive = r49.load(f"{base}/layout.r49")
+            assert archive.image("../x") is None
+            assert archive.image("/x") is None
+
+    def test_a_name_with_no_file_at_its_path_is_absent(self, tmp_path: Path) -> None:
+        with served(folder(tmp_path, {"manifest.json": layout_manifest()})) as base:
+            archive = r49.load(base)
+            assert archive.image("") is None
+            assert archive.image("./manifest.json") is None
+            assert archive.image("shots/") is None
+
+    def test_lists_the_names_in_the_manifest_and_reports_no_mismatch(self, tmp_path: Path) -> None:
+        files = {"manifest.json": layout_manifest("a.jpg", "gone.jpg"), "a.jpg": JPEG, "b": JPEG}
+        with served(folder(tmp_path, files)) as base:
+            archive = r49.load(base)
+            assert archive.entries() == ["manifest.json", "a.jpg", "gone.jpg"]
+            assert archive.image_mismatches() == []
 
 
 class TestFit:
