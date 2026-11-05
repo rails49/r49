@@ -3,6 +3,7 @@ file at a time from a zip, a folder or a base URL."""
 
 from __future__ import annotations
 
+import errno
 import io
 import os
 import urllib.error
@@ -35,6 +36,7 @@ _UNREADABLE_ZIP = (
     zipfile.BadZipFile,
     zlib.error,
     EOFError,
+    ValueError,
     NotImplementedError,
     RuntimeError,
     *_lzma_errors(),
@@ -68,6 +70,11 @@ class _Zip:
         try:
             with self._open() as zf:
                 infos = [info for info in zf.infolist() if not info.is_dir()]
+        except OSError as err:
+            # A damaged offset makes zipfile seek before the start of a file.
+            if err.errno != errno.EINVAL:
+                raise
+            raise self._refusal(err) from None
         except _UNREADABLE_ZIP as err:
             raise self._refusal(err) from None
         if any(info.flag_bits & 0x1 for info in infos):
@@ -91,9 +98,11 @@ class _Zip:
                 try:
                     return zf.read(name)
                 except OSError as err:
-                    # bz2 reports a damaged stream as a bare OSError. From any other
-                    # entry, an OSError is the disk's, and no verdict on the archive.
-                    if zf.getinfo(name).compress_type != zipfile.ZIP_BZIP2:
+                    # bz2 reports a damaged stream as a bare OSError, and a damaged
+                    # offset makes zipfile seek before the start of a file. Any other
+                    # OSError is the disk's, and no verdict on the archive.
+                    bz2 = zf.getinfo(name).compress_type == zipfile.ZIP_BZIP2
+                    if not bz2 and err.errno != errno.EINVAL:
                         raise
                     raise self._refusal(err) from None
         except _UNREADABLE_ZIP as err:

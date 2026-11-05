@@ -249,6 +249,48 @@ class TestZip:
             assert refused.value.rule == "archive/not-zip"
 
     @pytest.mark.parametrize(
+        "compression",
+        [zipfile.ZIP_STORED, zipfile.ZIP_DEFLATED, zipfile.ZIP_BZIP2, zipfile.ZIP_LZMA],
+    )
+    def test_refuses_an_image_whose_local_name_is_damaged(
+        self, compression: int, tmp_path: Path
+    ) -> None:
+        name = "schöne/bild.jpg"
+        data = bytearray(zipped({"manifest.json": layout_manifest(name), name: JPEG}, compression))
+        data[data.index(name.encode())] = 0xFF
+        path = tmp_path / "damaged.r49"
+        path.write_bytes(data)
+        for source in (bytes(data), path):
+            archive = r49.load(source)
+            with pytest.raises(r49.R49Error) as refused:
+                archive.image(name)
+            assert refused.value.rule == "archive/not-zip"
+
+    def test_refuses_a_damaged_central_directory_name_on_load(self, tmp_path: Path) -> None:
+        name = "schöne/bild.jpg"
+        data = bytearray(zipped({"manifest.json": layout_manifest(name), name: JPEG}))
+        data[data.index(name.encode(), data.index(b"PK\x01\x02"))] = 0xFF
+        path = tmp_path / "damaged.r49"
+        path.write_bytes(data)
+        for source in (bytes(data), path):
+            with pytest.raises(r49.R49Error) as refused:
+                r49.load(source)
+            assert refused.value.rule == "archive/not-zip"
+
+    @pytest.mark.parametrize("field", [12, 16], ids=["size", "offset"])
+    def test_refuses_a_damaged_central_directory_position_on_load(
+        self, field: int, tmp_path: Path
+    ) -> None:
+        data = bytearray(zipped({"manifest.json": layout_manifest()}))
+        data[data.index(b"PK\x05\x06") + field + 3] = 0x7F
+        path = tmp_path / "damaged.r49"
+        path.write_bytes(data)
+        for source in (bytes(data), path):
+            with pytest.raises(r49.R49Error) as refused:
+                r49.load(source)
+            assert refused.value.rule == "archive/not-zip"
+
+    @pytest.mark.parametrize(
         "compression", [zipfile.ZIP_STORED, zipfile.ZIP_DEFLATED, zipfile.ZIP_LZMA]
     )
     def test_a_disk_error_reading_an_image_is_no_verdict_on_the_archive(
