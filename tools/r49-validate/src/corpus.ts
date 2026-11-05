@@ -41,15 +41,27 @@ export function inCorpus(path: string): boolean {
   return (CORPUS_DIRECTORIES as readonly string[]).includes(top);
 }
 
-/** The `.r49` files among `paths` that are in the corpus, sorted. */
+/**
+ * Whether a path is a file inside a folder named `*.r49`. The format calls that
+ * folder an archive, but a submission is a zip, so such a file is refused.
+ */
+export function insideFolderArchive(path: string): boolean {
+  return segments(path).slice(0, -1).some(s => s.endsWith('.r49'));
+}
+
+/**
+ * The paths among `paths` the validator judges, sorted: the corpus's `.r49`
+ * files, and every file inside a folder named `*.r49`. Leaving those out would
+ * let a folder into the corpus unchecked.
+ */
 export function corpusArchives(paths: readonly string[]): string[] {
-  return paths.filter(p => inCorpus(p) && p.endsWith('.r49')).sort();
+  return paths.filter(p => inCorpus(p) && (p.endsWith('.r49') || insideFolderArchive(p))).sort();
 }
 
 /** Which bar this path is held to. */
 export function scopeOf(path: string): Scope {
   const parts = segments(path);
-  if (parts[0] === 'archives' && parts.length === 3) return 'archives';
+  if (parts[0] === 'archives' && parts.length === 3 && !insideFolderArchive(path)) return 'archives';
   return 'unknown';
 }
 
@@ -73,6 +85,16 @@ export function checkPath(path: string, author: string | null): Finding[] {
   const findings: Finding[] = [];
   const parts = segments(path);
   const scope = scopeOf(path);
+
+  if (insideFolderArchive(path)) {
+    findings.push({
+      code: 'path/shape',
+      message:
+        `${path} is inside a folder named *.r49. The format allows a folder, but a submission ` +
+        `is a zip: zip the folder's contents and submit archives/<your-github-handle>/<slug>.r49.`,
+    });
+    return findings;
+  }
 
   if (scope === 'unknown') {
     findings.push({

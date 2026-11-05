@@ -51,8 +51,9 @@ Options:
 async function corpusPaths(): Promise<string[]> {
   const paths: string[] = [];
   for (const directory of CORPUS_DIRECTORIES) {
-    const entries = await readdir(directory, { recursive: true });
-    paths.push(...entries.map(entry => join(directory, entry)));
+    // Files only: a folder named *.r49 is judged by the files inside it.
+    const entries = await readdir(directory, { recursive: true, withFileTypes: true });
+    paths.push(...entries.filter(e => e.isFile()).map(e => join(e.parentPath, e.name)));
   }
   return corpusArchives(paths);
 }
