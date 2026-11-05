@@ -7,11 +7,12 @@
 // re-export statements.
 
 //── Archive I/O ──────────────────────────────────────────────────────────────
-// Read and write .r49 layout archives (a zip of manifest.json + images).
+// Read and write .r49 layout archives (manifest.json + images), from a zip or a
+// base URL, which is how a folder is read here.
 // Manifests are validated against the v4 schema on load; invalid input throws
 // an R49Error naming the rule it broke.
 // There is no v3 path: loading anything else fails on the version number.
-export { R49Archive } from './archive.ts';
+export { R49Archive, type ArchiveWriter } from './archive.ts';
 
 //── Rules ────────────────────────────────────────────────────────────────────
 // Every refusal names the rule it broke, by a stable id from one closed set, so

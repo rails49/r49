@@ -19,7 +19,7 @@ export const FORMAT_RULES = [
   'archive/empty',
   /** The bytes are not a readable zip. */
   'archive/not-zip',
-  /** The zip holds no `manifest.json`. */
+  /** The archive holds no `manifest.json`. */
   'archive/no-manifest',
   /** `manifest.json` is not valid JSON. */
   'manifest/not-json',
@@ -35,9 +35,9 @@ export const FORMAT_RULES = [
   'manifest/filename',
   /** Any other shape the format does not allow: a missing scale, a wrong type, an empty id. */
   'manifest/schema',
-  /** The manifest names an image the zip does not contain. */
+  /** The manifest names an image the archive does not contain. */
   'images/missing',
-  /** The zip contains an image no manifest entry names. */
+  /** The archive contains a file no manifest entry names. */
   'images/orphan',
 ] as const;
 
