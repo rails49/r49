@@ -19,7 +19,26 @@ from .manifest import Manifest, parse_manifest, stays_in_archive
 MANIFEST_FILE = "manifest.json"
 
 _HTTP_TIMEOUT_SECONDS = 60
-_UNREADABLE_ZIP = (zipfile.BadZipFile, zlib.error, EOFError, NotImplementedError, RuntimeError)
+
+
+def _lzma_errors() -> tuple[type[Exception], ...]:
+    """What a damaged lzma entry raises. A Python built without lzma has no such
+    error: zipfile raises RuntimeError for an lzma entry there."""
+    try:
+        from lzma import LZMAError
+    except ImportError:
+        return ()
+    return (LZMAError,)
+
+
+_UNREADABLE_ZIP = (
+    zipfile.BadZipFile,
+    zlib.error,
+    EOFError,
+    NotImplementedError,
+    RuntimeError,
+    *_lzma_errors(),
+)
 
 
 def _is_dot_path(name: str) -> bool:
@@ -69,7 +88,14 @@ class _Zip:
             return None
         try:
             with self._open() as zf:
-                return zf.read(name)
+                try:
+                    return zf.read(name)
+                except OSError as err:
+                    # bz2 reports a damaged stream as a bare OSError. From any other
+                    # entry, an OSError is the disk's, and no verdict on the archive.
+                    if zf.getinfo(name).compress_type != zipfile.ZIP_BZIP2:
+                        raise
+                    raise self._refusal(err) from None
         except _UNREADABLE_ZIP as err:
             raise self._refusal(err) from None
 
