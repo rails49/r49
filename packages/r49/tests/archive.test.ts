@@ -273,6 +273,18 @@ describe('R49Archive', () => {
       const m = manifest({ layout: { scale: 'HO', calibration: { points: [cal([0, 0], [Infinity, 0])] } } });
       expect(rejection(m).rule).toBe('manifest/schema');
     });
+
+    it('refuses to add an image at a filename that leaves the archive, and changes nothing', async () => {
+      const archive = new R49Archive();
+      archive.setManifest(manifest());
+      for (const filename of ['/a.jpg', '../a.jpg', 'images/../a.jpg']) {
+        await expect(archive.addImage(filename, new Uint8Array([1]))).rejects.toMatchObject({
+          rule: 'manifest/filename',
+        });
+      }
+      expect(archive.getManifest().images).toEqual([]);
+      expect(archive.listEntries()).toEqual([]);
+    });
   });
 
   // The archive-level id is identity: optional at the format layer, required

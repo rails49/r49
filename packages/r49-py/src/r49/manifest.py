@@ -208,6 +208,19 @@ class Image(_Strict):
     labeled_complete: bool = False
     labels: list[CarLabel] = []
 
+    @field_validator("filename")
+    @classmethod
+    def _stays_in_archive(cls, filename: str) -> str:
+        # Only a whole segment climbs: `frame..jpg` goes nowhere.
+        if filename.startswith("/") or ".." in filename.split("/"):
+            raise PydanticCustomError(
+                "filename",
+                "filename {filename!r} is absolute or has a .. segment: "
+                "it must stay inside the archive",
+                {"filename": filename},
+            )
+        return filename
+
     @field_validator("labels")
     @classmethod
     def _unique_label_ids(cls, labels: list[CarLabel]) -> list[CarLabel]:
@@ -268,7 +281,7 @@ def parse_manifest(data: bytes) -> Manifest:
 
     :raises R49Error: ``manifest/not-json``, ``manifest/version``,
         ``manifest/unknown-key``, ``manifest/provenance``,
-        ``manifest/duplicate-id`` or ``manifest/schema``.
+        ``manifest/duplicate-id``, ``manifest/filename`` or ``manifest/schema``.
     """
     try:
         # Strict: an invalid byte must not load as U+FFFD (rails49/occupancy#191).
@@ -331,6 +344,8 @@ def _rule(issues: list[ErrorDetails]) -> FormatRule:
         return "manifest/provenance"
     if any(i["type"] == "duplicate_id" for i in issues):
         return "manifest/duplicate-id"
+    if any(i["type"] == "filename" for i in issues):
+        return "manifest/filename"
     return "manifest/schema"
 
 

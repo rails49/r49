@@ -1,0 +1,5 @@
+{
+  "description": "A filename that starts with /: it is a path from outside the archive.",
+  "result": "reject",
+  "rule": "manifest/filename"
+}

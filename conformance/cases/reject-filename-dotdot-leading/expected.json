@@ -1,0 +1,5 @@
+{
+  "description": "A filename whose first segment is exactly ..: it climbs out of the archive.",
+  "result": "reject",
+  "rule": "manifest/filename"
+}

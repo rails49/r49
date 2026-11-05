@@ -4,6 +4,7 @@ import { R49Error, type FormatRule, type ImageMismatch } from './rules.ts';
 import {
   parseManifest,
   assertManifestVersion,
+  staysInArchive,
   type ManifestData,
   type Image,
 } from './manifest.schema.ts';
@@ -119,7 +120,8 @@ export class R49Archive {
    *
    * @throws An {@link R49Error} naming the rule broken: `manifest/version`,
    *         `manifest/unknown-key`, `manifest/duplicate-id`,
-   *         `manifest/provenance`, or `manifest/schema` for anything else.
+   *         `manifest/provenance`, `manifest/filename`, or `manifest/schema`
+   *         for anything else.
    */
   setManifest(data: ManifestData): void {
     assertManifestVersion(data);
@@ -189,8 +191,14 @@ export class R49Archive {
    * matching entry with no labels and `labeled_complete: false` — nothing may
    * assert completeness on a human's behalf. Adding an existing filename
    * overwrites the bytes and leaves the manifest entry (and its labels) intact.
+   *
+   * @throws An {@link R49Error} naming `manifest/filename` for a filename that
+   *         does not stay inside the archive, which no reader would load back.
    */
   async addImage(filename: string, data: Uint8Array | Buffer | Blob | ArrayBuffer): Promise<void> {
+    if (!staysInArchive(filename)) {
+      throw new R49Error('manifest/filename', `${filename} does not stay inside the archive`);
+    }
     this.zip.file(filename, data);
     if (this.manifest) {
       const exists = this.manifest.images.some((img: Image) => img.filename === filename);

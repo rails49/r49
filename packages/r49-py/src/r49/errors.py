@@ -15,6 +15,7 @@ FormatRule = Literal[
     "manifest/unknown-key",
     "manifest/duplicate-id",
     "manifest/provenance",
+    "manifest/filename",
     "manifest/schema",
     "images/missing",
     "images/orphan",
