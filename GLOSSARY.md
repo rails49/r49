@@ -11,7 +11,7 @@ A model railroad, seen from one camera position. An archive holds one. See [FORM
 _Avoid_: scene
 
 **Archive**:
-A `.r49` file holding one layout's images, calibration, sensors and car labels. See [FORMAT § The archive](FORMAT.md#the-archive).
+A `.r49` zip or folder holding one layout's images, calibration, sensors and car labels. See [FORMAT § The archive](FORMAT.md#the-archive).
 _Avoid_: project, dataset
 
 **Format**:
