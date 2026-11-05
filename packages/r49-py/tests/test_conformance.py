@@ -4,6 +4,8 @@ Cases assert an outcome (accept or reject, the rule id, DPT, residual and
 image mismatches) and never a message: the id is the contract, the wording is not.
 A case whose input is ``track.json`` asserts points on the curve between nodes
 and the nearest point on a track instead.
+Every archive case also runs in each other form it can take: a readable zip
+unpacked as a folder, and a readable zip or a folder over a local HTTP server.
 ``conformance/README.md`` defines a case; this is the Python way of running one.
 """
 
@@ -11,11 +13,14 @@ from __future__ import annotations
 
 import json
 import math
+import os
+import zipfile
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
 import pytest
+from http_server import served
 
 import r49
 
@@ -40,19 +45,31 @@ def judge(case: Path) -> Outcome:
     manifest = case / "manifest.json"
     inputs = [path for path in (archive, manifest) if path.exists()]
     assert len(inputs) == 1, f"{case.name} holds {len(inputs)} of archive.r49 and manifest.json"
-    mismatches: tuple[r49.ImageMismatch, ...] = ()
+    if archive.exists():
+        return judge_archive(archive)
     try:
-        if archive.exists():
-            loaded = r49.load(archive)
-            parsed, mismatches = loaded.manifest, tuple(loaded.image_mismatches())
-        else:
-            # Python parses a bare manifest on its own, so it is exempt from
-            # the zip and image rules without a placeholder archive.
-            parsed = r49.parse_manifest(manifest.read_bytes())
+        # Python parses a bare manifest on its own, so it is exempt from
+        # the zip and image rules without a placeholder archive.
+        parsed = r49.parse_manifest(manifest.read_bytes())
     except r49.R49Error as err:
         return Outcome("reject", rule=err.rule)
     result = r49.calibration_fit(parsed)
-    return Outcome("accept", dpt=result.dpt, residual=result.residual, image_mismatches=mismatches)
+    return Outcome("accept", dpt=result.dpt, residual=result.residual)
+
+
+def judge_archive(source: str | os.PathLike[str]) -> Outcome:
+    """Load an archive in any form and report what the package made of it."""
+    try:
+        loaded = r49.load(source)
+    except r49.R49Error as err:
+        return Outcome("reject", rule=err.rule)
+    result = r49.calibration_fit(loaded.manifest)
+    return Outcome(
+        "accept",
+        dpt=result.dpt,
+        residual=result.residual,
+        image_mismatches=tuple(loaded.image_mismatches()),
+    )
 
 
 def disagreements(expected: dict[str, Any], outcome: Outcome) -> list[str]:
@@ -140,6 +157,14 @@ def tracks_of(case: Path) -> list[r49.Track]:
 ALL = sorted(path for path in CASES.iterdir() if path.is_dir())
 TRACK = [c for c in ALL if (c / "track.json").exists()]
 VERDICT = [c for c in ALL if c not in TRACK]
+FOLDER = [c for c in VERDICT if (c / "archive.r49").is_dir()]
+# A zip-only rule says nothing of an archive in another form.
+READABLE_ZIP = [
+    c
+    for c in VERDICT
+    if (c / "archive.r49").is_file()
+    and expected_of(c).get("rule") not in ("archive/empty", "archive/not-zip")
+]
 
 
 def test_every_case_holds_one_input() -> None:
@@ -152,6 +177,40 @@ def test_case(case: Path) -> None:
     assert disagreements(expected_of(case), judge(case)) == []
 
 
+def unpacked(case: Path, into: Path) -> Path:
+    with zipfile.ZipFile(case / "archive.r49") as zf:
+        zf.extractall(into)
+    return into
+
+
+@pytest.mark.parametrize("case", READABLE_ZIP, ids=[path.name for path in READABLE_ZIP])
+def test_zip_case_unpacked_as_a_folder(case: Path, tmp_path: Path) -> None:
+    assert disagreements(expected_of(case), judge_archive(unpacked(case, tmp_path))) == []
+
+
+def over_url(root: Path) -> Outcome:
+    with served(root) as base:
+        return judge_archive(base)
+
+
+def without_image_mismatches(expected: dict[str, Any]) -> dict[str, Any]:
+    """What a URL must agree with: FORMAT.md exempts it from both image rules, so
+    it reports no image mismatch whatever the archive holds."""
+    return {key: value for key, value in expected.items() if key != "image_mismatches"}
+
+
+@pytest.mark.parametrize("case", READABLE_ZIP, ids=[path.name for path in READABLE_ZIP])
+def test_zip_case_over_a_url(case: Path, tmp_path: Path) -> None:
+    outcome = over_url(unpacked(case, tmp_path))
+    assert disagreements(without_image_mismatches(expected_of(case)), outcome) == []
+
+
+@pytest.mark.parametrize("case", FOLDER, ids=[path.name for path in FOLDER])
+def test_folder_case_over_a_url(case: Path) -> None:
+    outcome = over_url(case / "archive.r49")
+    assert disagreements(without_image_mismatches(expected_of(case)), outcome) == []
+
+
 @pytest.mark.parametrize("case", TRACK, ids=[path.name for path in TRACK])
 def test_track_case(case: Path) -> None:
     assert track_disagreements(expected_of(case), tracks_of(case)) == []
@@ -160,6 +219,11 @@ def test_track_case(case: Path) -> None:
 REJECTED = {expected_of(c)["rule"] for c in VERDICT if expected_of(c)["result"] == "reject"}
 REPORTED = {m["rule"] for c in VERDICT for m in expected_of(c).get("image_mismatches", [])}
 IMAGE_RULES = [rule for rule in r49.FORMAT_RULES if rule.startswith("images/")]
+
+
+def test_a_folder_case_and_every_form_of_a_zip_case_exist() -> None:
+    assert FOLDER != []
+    assert READABLE_ZIP != []
 
 
 def test_every_format_rule_id_but_the_image_rules_is_rejected_at_least_once() -> None:

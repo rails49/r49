@@ -1,0 +1,10 @@
+{
+  "description": "A folder holding a file, not under a dot path, that no image names.",
+  "result": "accept",
+  "image_mismatches": [
+    {
+      "rule": "images/orphan",
+      "filename": "shots/b.jpg"
+    }
+  ]
+}

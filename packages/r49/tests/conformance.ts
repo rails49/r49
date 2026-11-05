@@ -1,5 +1,5 @@
-import { readdirSync, readFileSync, existsSync } from 'node:fs';
-import { join } from 'node:path';
+import { readdirSync, readFileSync, existsSync, statSync } from 'node:fs';
+import { join, sep } from 'node:path';
 import JSZip from 'jszip';
 import type { ImageMismatch, Point, Track } from '../src/index.ts';
 import {
@@ -52,9 +52,13 @@ export type Outcome =
 /** One case, read from its directory. */
 export type Case =
   | { name: string; input: { kind: 'archive' | 'manifest'; bytes: Uint8Array }; expected: ArchiveExpected }
+  | { name: string; input: { kind: 'folder'; files: Files }; expected: ArchiveExpected }
   | { name: string; input: { kind: 'track'; tracks: Track[] }; expected: TrackExpected };
 
-type InputKind = Case['input']['kind'];
+/** The files of an archive in a folder, by path from its root. */
+export type Files = Record<string, Uint8Array>;
+
+type InputKind = Exclude<Case['input']['kind'], 'folder'>;
 
 /** Every case under `root`, in name order. */
 export function readCases(root: string): Case[] {
@@ -73,13 +77,52 @@ export function readCase(root: string, name: string): Case {
     throw new Error(`case ${name}: holds ${inputs.length} of archive.r49, manifest.json and track.json, not exactly one`);
   }
   const kind = inputs[0];
+  if (kind === 'archive' && statSync(join(dir, INPUT_FILE[kind])).isDirectory()) {
+    const files = readFolder(join(dir, INPUT_FILE[kind]));
+    return { name, input: { kind: 'folder', files }, expected: readExpected(dir) as ArchiveExpected };
+  }
   const bytes = new Uint8Array(readFileSync(join(dir, INPUT_FILE[kind])));
-  const expected: unknown = JSON.parse(readFileSync(join(dir, 'expected.json'), 'utf8'));
+  const expected = readExpected(dir);
   if (kind === 'track') {
     const { tracks } = JSON.parse(new TextDecoder().decode(bytes)) as { tracks: Track[] };
     return { name, input: { kind, tracks }, expected: expected as TrackExpected };
   }
   return { name, input: { kind, bytes }, expected: expected as ArchiveExpected };
+}
+
+function readExpected(dir: string): unknown {
+  return JSON.parse(readFileSync(join(dir, 'expected.json'), 'utf8'));
+}
+
+function readFolder(root: string): Files {
+  const paths = readdirSync(root, { recursive: true, encoding: 'utf8' });
+  const files = paths.filter(path => statSync(join(root, path)).isFile());
+  return Object.fromEntries(files.map(path => [path.split(sep).join('/'), new Uint8Array(readFileSync(join(root, path)))]));
+}
+
+/** Whether a case's zip can be read at all, and so can take another form. */
+export function isReadableZip(c: Case): boolean {
+  if (c.input.kind !== 'archive') return false;
+  const expected = c.expected as ArchiveExpected;
+  return !(expected.result === 'reject' && ['archive/empty', 'archive/not-zip'].includes(expected.rule));
+}
+
+/** A readable zip's files, as a folder or a server would hold them. */
+export async function unpack(bytes: Uint8Array): Promise<Files> {
+  const zip = await JSZip.loadAsync(bytes);
+  const files: Files = {};
+  for (const entry of Object.values(zip.files)) {
+    if (!entry.dir) files[entry.name] = await entry.async('uint8array');
+  }
+  return files;
+}
+
+/**
+ * What a URL must agree with: FORMAT.md exempts it from both image rules, so it
+ * reports no image mismatch whatever the archive holds.
+ */
+export function withoutImageMismatches(expected: ArchiveExpected): ArchiveExpected {
+  return expected.result === 'accept' ? { ...expected, image_mismatches: [] } : expected;
 }
 
 const INPUT_FILE: Record<InputKind, string> = {
@@ -95,13 +138,13 @@ export async function judge(input: { kind: 'archive' | 'manifest'; bytes: Uint8A
 }
 
 /**
- * Load archive bytes and report the outcome. A refusal is an R49Error; anything
+ * Load archive bytes or a base URL and report the outcome. A refusal is an R49Error; anything
  * else thrown is a bug in the package, not a verdict, and propagates.
  */
-export async function judgeArchive(bytes: Uint8Array): Promise<Outcome> {
+export async function judgeArchive(source: Uint8Array | string): Promise<Outcome> {
   let archive: InstanceType<typeof R49Archive>;
   try {
-    archive = await R49Archive.load(bytes);
+    archive = await R49Archive.load(source);
   } catch (err) {
     if (err instanceof R49Error) return { result: 'reject', rule: err.rule };
     throw err;
