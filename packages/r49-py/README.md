@@ -1,7 +1,7 @@
 # rails49-r49
 
-Reads `.r49` railroad layout archives in Python: a zip holding a `manifest.json`
-plus the layout photographs it describes. The format is defined in
+Reads `.r49` railroad layout archives in Python: a zip or a folder holding a
+`manifest.json` plus the layout photographs it describes, one file at a time. The format is defined in
 [FORMAT.md](https://github.com/rails49/r49/blob/main/FORMAT.md); this package is a
 reader of it, and agrees with the TypeScript package
 [`@rails49/r49`](https://github.com/rails49/r49/tree/main/packages/r49) on every
@@ -26,7 +26,7 @@ in code. The sdist holds a copy of the file in place of the link.
 ```python
 import r49
 
-archive = r49.load("layout.r49")          # a path, or the archive's bytes
+archive = r49.load("layout.r49")          # a zip's path or bytes, a folder's path, or a base URL
 manifest = archive.manifest
 print(manifest.layout.name, manifest.layout.scale)
 
@@ -48,6 +48,17 @@ archive whose images and manifest disagree still loads; `image_mismatches()`
 lists each disagreement under `images/missing` or `images/orphan`.
 `r49.parse_manifest` reads a bare `manifest.json`, which is exempt from the zip
 and image rules.
+
+`load` reads the manifest and no image, and the archive keeps no file open, so
+there is nothing to close. `image` returns bytes, or `None` when the file is
+absent or its name would leave the archive. A damaged image in a zip raises
+`archive/not-zip` when it is read.
+
+A base URL is read as `<base>/manifest.json` and `<base>/<filename>`, with each
+path segment percent-encoded. A 404 means the file is absent. Any other HTTP or
+network failure raises an `OSError`, not an `R49Error`, because it is no verdict
+on the archive. A URL cannot be listed, so `entries()` is `manifest.json` and the
+names in the manifest, and `image_mismatches()` is empty.
 
 A car label's `class` is `class_` in Python; the manifest key stays `class`.
 

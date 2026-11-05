@@ -35,6 +35,12 @@ VALID_SCALES: Final[tuple[str, ...]] = tuple(SCALE_TO_RATIO)
 """Every valid scale name, in the order ``data.json`` defines them."""
 
 
+def stays_in_archive(filename: str) -> bool:
+    """Whether ``filename`` is one ``manifest/filename`` lets through. Only a whole
+    segment climbs: ``frame..jpg`` goes nowhere."""
+    return not filename.startswith("/") and ".." not in filename.split("/")
+
+
 def _whole(value: object) -> object:
     # JSON has numbers, not integers: `1920.0` is the integer 1920, as it is
     # to the TypeScript package. A float with a fraction stays a float and
@@ -211,8 +217,7 @@ class Image(_Strict):
     @field_validator("filename")
     @classmethod
     def _stays_in_archive(cls, filename: str) -> str:
-        # Only a whole segment climbs: `frame..jpg` goes nowhere.
-        if filename.startswith("/") or ".." in filename.split("/"):
+        if not stays_in_archive(filename):
             raise PydanticCustomError(
                 "filename",
                 "filename {filename!r} is absolute or has a .. segment: "

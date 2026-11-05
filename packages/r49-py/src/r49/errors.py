@@ -45,9 +45,9 @@ class R49Error(Exception):
 
 @dataclass(frozen=True)
 class ImageMismatch:
-    """One way the manifest and the zip disagree about which images an archive
+    """One way the manifest and the archive's files disagree about which images it
     holds. Reported by :meth:`R49Archive.image_mismatches`, never raised."""
 
     rule: Literal["images/missing", "images/orphan"]
     filename: str
-    """The manifest filename, or the zip entry, the disagreement is about."""
+    """The manifest filename, or the file in the archive, the disagreement is about."""
