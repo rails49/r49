@@ -7,6 +7,8 @@ from __future__ import annotations
 import io
 import json
 import os
+import subprocess
+import sys
 import tracemalloc
 import urllib.error
 import zipfile
@@ -34,9 +36,9 @@ def point(x: float, y: float, z: float) -> dict[str, Any]:
     return {"px": {"x": x, "y": y}, "world": {"x": x, "y": y, "z": z}}
 
 
-def zipped(files: dict[str, bytes]) -> bytes:
+def zipped(files: dict[str, bytes], compression: int = zipfile.ZIP_STORED) -> bytes:
     buffer = io.BytesIO()
-    with zipfile.ZipFile(buffer, "w") as zf:
+    with zipfile.ZipFile(buffer, "w", compression) as zf:
         for name, data in files.items():
             zf.writestr(name, data)
     return buffer.getvalue()
@@ -162,12 +164,18 @@ def folder(root: Path, files: dict[str, bytes]) -> Path:
     return root
 
 
-def damaged(data: bytes, name: str) -> bytes:
-    """A zip with the stored bytes of ``name`` changed, its directory intact."""
+def damaged(data: bytes, name: str, at: int = 0) -> bytes:
+    """A zip with four stored bytes of ``name`` changed, ``at`` bytes into it, its
+    directory intact."""
     with zipfile.ZipFile(io.BytesIO(data)) as zf:
         info = zf.getinfo(name)
-    start = info.header_offset + 30 + len(info.filename.encode()) + len(info.extra)
+    start = info.header_offset + 30 + len(info.filename.encode()) + len(info.extra) + at
     return data[:start] + bytes(b ^ 0xFF for b in data[start : start + 4]) + data[start + 4 :]
+
+
+LZMA_HEADER = 9
+"""What ``zipfile`` writes before an lzma stream. Damage past it reaches the
+decompressor; damage to its size field only looks like a short entry."""
 
 
 class TestZip:
@@ -217,6 +225,67 @@ class TestZip:
             with pytest.raises(r49.R49Error) as refused:
                 archive.image("bad.jpg")
             assert refused.value.rule == "archive/not-zip"
+
+    @pytest.mark.parametrize(
+        ("compression", "at"),
+        [
+            (zipfile.ZIP_STORED, 0),
+            (zipfile.ZIP_DEFLATED, 0),
+            (zipfile.ZIP_BZIP2, 0),
+            (zipfile.ZIP_LZMA, LZMA_HEADER),
+        ],
+    )
+    def test_refuses_a_damaged_image_however_it_is_compressed(
+        self, compression: int, at: int, tmp_path: Path
+    ) -> None:
+        files = {"manifest.json": layout_manifest("bad.jpg"), "bad.jpg": bytes(range(256)) * 4}
+        data = damaged(zipped(files, compression), "bad.jpg", at)
+        path = tmp_path / "damaged.r49"
+        path.write_bytes(data)
+        for source in (data, path):
+            archive = r49.load(source)
+            with pytest.raises(r49.R49Error) as refused:
+                archive.image("bad.jpg")
+            assert refused.value.rule == "archive/not-zip"
+
+    @pytest.mark.parametrize(
+        "compression", [zipfile.ZIP_STORED, zipfile.ZIP_DEFLATED, zipfile.ZIP_LZMA]
+    )
+    def test_a_disk_error_reading_an_image_is_no_verdict_on_the_archive(
+        self, compression: int, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        archive = self.loaded_with_a_failing_disk(compression, tmp_path, monkeypatch)
+        with pytest.raises(OSError):
+            archive.image("a.jpg")
+
+    def test_an_oserror_reading_a_bz2_image_counts_as_damage(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        archive = self.loaded_with_a_failing_disk(zipfile.ZIP_BZIP2, tmp_path, monkeypatch)
+        with pytest.raises(r49.R49Error) as refused:
+            archive.image("a.jpg")
+        assert refused.value.rule == "archive/not-zip"
+
+    @staticmethod
+    def loaded_with_a_failing_disk(
+        compression: int, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> r49.R49Archive:
+        path = tmp_path / "layout.r49"
+        path.write_bytes(
+            zipped({"manifest.json": layout_manifest("a.jpg"), "a.jpg": JPEG}, compression)
+        )
+        archive = r49.load(path)
+
+        def fail(*_: object) -> bytes:
+            raise OSError("disk error")
+
+        monkeypatch.setattr(zipfile.ZipExtFile, "read", fail)
+        return archive
+
+    @pytest.mark.parametrize("module", ["bz2", "lzma"])
+    def test_imports_on_a_python_built_without_an_optional_module(self, module: str) -> None:
+        code = f"import sys; sys.modules[{module!r}] = None; import r49"
+        subprocess.run([sys.executable, "-c", code], check=True, capture_output=True)
 
     def test_refuses_a_damaged_manifest_on_load(self) -> None:
         data = damaged(zipped({"manifest.json": layout_manifest()}), "manifest.json")
