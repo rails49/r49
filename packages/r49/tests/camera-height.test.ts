@@ -20,6 +20,7 @@ const cal = (px: [number, number], world: [number, number, number?]) => ({
 function manifest(calibration: Record<string, unknown>): ManifestData {
   return {
     version: 4,
+    id: 'aBcDeFgHiJk',
     layout: { name: 'Test Layout', scale: 'HO', calibration, sensors: [] },
     camera: { resolution: { width: 1920, height: 1080 } },
     images: [],

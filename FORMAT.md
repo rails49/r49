@@ -50,7 +50,7 @@ shares them.
 ```jsonc
 {
   "version": 4,
-  "id": "0PKAbvK57FA",                                     // optional
+  "id": "0PKAbvK57FA",
   "layout": {
     "name": "…", "description": "…", "contact": "…",      // all optional
     "scale": "HO",
@@ -97,14 +97,13 @@ down. Layout positions are in millimetres.
 | Field | Type | Meaning |
 | :--- | :--- | :--- |
 | `version` | the integer `4` | The format version. See [Versions](#versions). |
-| `id` | non-empty string, optional | The archive's identity, the same across every save. It is identity, not an address: renaming or moving the archive does not make it a different archive. |
+| `id` | non-empty string | The archive's identity, the same across every save. It is identity, not an address: renaming or moving the archive does not make it a different archive. |
 | `layout` | object | The layout the camera sees. |
 | `camera` | object | The camera the images were taken with. |
 | `images` | array of image | The images, in order. |
 
 The format asks only that an `id` be a non-empty string. How a writer mints one
-is the writer's choice, and a writer never replaces an `id` that exists. The
-corpus requires one; see [Corpus rules](#corpus-rules).
+is the writer's choice, and a writer never replaces an `id` that exists.
 
 ### `layout`
 
@@ -287,7 +286,7 @@ more than one rule, which one is reported is not specified.
 | `manifest/duplicate-id` | two sensors, or two labels in one image, share an `id`. |
 | `manifest/provenance` | a label's `provenance` is missing or not one of the three, or `proposed_by` is present on `human`, or missing or empty on `proposed` or `corrected`. |
 | `manifest/filename` | an image's `filename` starts with `/` or has a path segment that is empty, `.` or `..`, in a zip, a folder or a bare manifest. |
-| `manifest/schema` | any other field is missing, has the wrong type or is out of range: no `scale`, an unknown scale name, an empty `id`, a `camera_height_mm` of 0 or below, a non-integer resolution, a track of one node or with two consecutive nodes at one position, a node with no `heading`, a track whose last click is `straight`, a number too large to be finite such as `1e999`. |
+| `manifest/schema` | any other field is missing, has the wrong type or is out of range: no `scale`, an unknown scale name, no `id` or an empty one, a `camera_height_mm` of 0 or below, a non-integer resolution, a track of one node or with two consecutive nodes at one position, a node with no `heading`, a track whose last click is `straight`, a number too large to be finite such as `1e999`. |
 
 Two rules are about the images, and a reader reports them instead of refusing
 the archive. It loads the archive and lists each disagreement, by its file name,
@@ -421,7 +420,6 @@ A submission under `archives/<handle>/` is refused, with the id shown, unless:
 | Rule id | Rule |
 | :--- | :--- |
 | *a format rule id* | The archive is valid under every [format rule](#format-rules). |
-| `archive/id` | The archive has an `id`. |
 | `archive/id-collision` | No other archive in the corpus has the same `id`. |
 | `images/duplicate` | No image has the same bytes as another image in this archive or in any other archive in the corpus. |
 | `labels/provenance` | No label is `proposed`. A person reviews every proposal, which makes it `corrected`. |

@@ -81,8 +81,8 @@ id; `validate.ts` implements it and `corpus.ts` holds the path rules. An archive
 breaks (`archive/not-zip`, `manifest/version`, ...), read off the `R49Error`.
 Every archive that loads is then checked for `images/missing` and
 `images/orphan`, read off `imageMismatches()`. The corpus rules then block on
-`archive/id`, `archive/id-collision`, `images/duplicate`, `labels/provenance`,
-`labels/class`, `path/shape`, `path/slug` and `path/owner`. The first two compare
+`archive/id-collision`, `images/duplicate`, `labels/provenance`, `labels/class`,
+`path/shape`, `path/slug` and `path/owner`. The first two compare
 each submission with every other archive in `archives/` and with each other.
 
 Warnings, read by the maintainer and blocking nothing: `calibration/dpt` (DPT

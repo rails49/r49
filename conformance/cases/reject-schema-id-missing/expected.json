@@ -1,0 +1,5 @@
+{
+  "description": "A manifest with no archive id.",
+  "result": "reject",
+  "rule": "manifest/schema"
+}

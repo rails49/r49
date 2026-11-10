@@ -25,7 +25,7 @@ const CALIBRATED = [
 ];
 
 interface Build {
-  id?: string | null;
+  id?: string;
   calibration?: typeof CALIBRATED | [];
   labels?: Record<string, unknown>[];
   complete?: boolean;
@@ -54,7 +54,7 @@ async function build(path: string, opts: Build = {}): Promise<ArchiveInput> {
   // not compile.
   const manifest: unknown = {
     version: 4,
-    ...(opts.id === null ? {} : { id: opts.id ?? 'aBcDeFgHiJk' }),
+    id: opts.id ?? 'aBcDeFgHiJk',
     layout: {
       scale: 'HO',
       calibration: { points: opts.calibration ?? CALIBRATED },
@@ -80,10 +80,8 @@ async function build(path: string, opts: Build = {}): Promise<ArchiveInput> {
 }
 
 /**
- * A valid v4 archive carrying no `id`, assembled zip-first.
- *
- * `R49Archive` cannot make one — `saveManifest` mints on every write — so the
- * only way to exercise `archive/id` is to write `manifest.json` directly.
+ * An archive that is valid v4 but for its missing `id`, assembled zip-first:
+ * `R49Archive` refuses to hold a manifest without one.
  */
 async function idlessArchive(): Promise<Uint8Array> {
   const zip = new JSZip();
@@ -218,24 +216,14 @@ describe('validate', () => {
       expect(nested.errors).toEqual([]);
     });
 
-    it('blocks an archive with no id', async () => {
-      // Built by hand, because R49Archive can no longer produce one: every
-      // export() mints an id when the manifest lacks one. So this check fires
-      // only for a hand-assembled archive or one written by a build predating
-      // that change — which is exactly the population it is aimed at, and the
-      // reason the message offers saving it again before writing an id by hand.
+    it('blocks an archive with no id as manifest/schema', async () => {
       const result = await reportFor({
         path: 'archives/alice/west-yard.r49',
         bytes: await idlessArchive(),
       });
 
-      expect(codes(result.errors)).toEqual(['archive/id']);
-      expect(result.errors[0].message).toContain('Save it again');
-      expect(result.errors[0].message).toContain('top-level "id"');
-      expect(result.errors[0].message).not.toMatch(/editor|\bapp\b/i);
+      expect(codes(result.errors)).toEqual(['manifest/schema']);
       expect(result.id).toBeNull();
-      // The rest of the archive is fine, so nothing else fires.
-      expect(result.warnings).toEqual([]);
     });
 
     it('blocks two archives in one directory sharing an id', async () => {
@@ -474,9 +462,13 @@ describe('validate', () => {
 
   describe('fixtures/', () => {
     it('is held to the full bar, and has no place in the corpus', async () => {
-      const result = await reportFor({ path: 'fixtures/cars-0-10.r49', bytes: await idlessArchive() });
+      const result = await reportFor(
+        await build('fixtures/cars-0-10.r49', {
+          labels: [car({ provenance: 'proposed', proposed_by: 'v1.0.0' })],
+        })
+      );
       expect(result.scope).toBe('unknown');
-      expect(codes(result.errors)).toEqual(['path/shape', 'archive/id']);
+      expect(codes(result.errors)).toEqual(['path/shape', 'labels/provenance']);
     });
   });
 

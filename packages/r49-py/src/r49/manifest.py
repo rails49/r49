@@ -271,7 +271,7 @@ class Manifest(_Strict):
     says; ``model_fields_set`` tells which were present."""
 
     version: _Integer
-    id: _NonEmpty | None = None
+    id: _NonEmpty
     layout: Layout
     camera: Camera
     images: list[Image] = []

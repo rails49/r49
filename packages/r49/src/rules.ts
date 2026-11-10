@@ -54,8 +54,6 @@ export const CORPUS_RULES = [
   'path/slug',
   /** The submission sits under a contributor directory other than its author's. */
   'path/owner',
-  /** The archive carries no archive-level `id`. */
-  'archive/id',
   /** Two archives in the corpus share an `id`. */
   'archive/id-collision',
   /** Two images in the corpus have the same bytes. */

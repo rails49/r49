@@ -27,7 +27,12 @@ def manifest(calibration: dict[str, Any] | None = None, **extra: Any) -> r49.Man
     layout: dict[str, Any] = {"scale": "HO"}
     if calibration is not None:
         layout["calibration"] = calibration
-    data = {"version": 4, "layout": layout, "camera": {"resolution": {"width": 4, "height": 3}}}
+    data = {
+        "version": 4,
+        "id": "a",
+        "layout": layout,
+        "camera": {"resolution": {"width": 4, "height": 3}},
+    }
     return r49.parse_manifest(json.dumps(data | extra).encode())
 
 
@@ -49,6 +54,7 @@ ARCHIVE = zipped(
         "manifest.json": json.dumps(
             {
                 "version": 4,
+                "id": "a",
                 "layout": {"scale": "N"},
                 "camera": {"resolution": {"width": 4, "height": 3}},
                 "images": [{"filename": "shots/a.jpg"}],
@@ -85,6 +91,7 @@ class TestLoad:
         track = {"nodes": [{"x": 2, "y": 3, "heading": 0.5}, {"x": 0, "y": 1, "heading": -3}]}
         data = {
             "version": 4,
+            "id": "a",
             "layout": {"scale": "HO", "tracks": [track]},
             "camera": {"resolution": {"width": 4, "height": 3}},
         }
@@ -101,6 +108,7 @@ class TestLoad:
         clicks = [{"x": 0, "y": 0, "straight": True}, {"x": 9, "y": 0.5}, {"x": 4, "y": -0.5}]
         data = {
             "version": 4,
+            "id": "a",
             "layout": {"scale": "HO", "tracks": [{"nodes": nodes, "clicks": clicks}]},
             "camera": {"resolution": {"width": 4, "height": 3}},
         }
@@ -119,6 +127,7 @@ class TestLoad:
     def test_reports_missing_images_then_orphans(self) -> None:
         data = {
             "version": 4,
+            "id": "a",
             "layout": {"scale": "HO"},
             "camera": {"resolution": {"width": 4, "height": 3}},
             "images": [{"filename": "a.jpg"}, {"filename": "b.jpg"}],
@@ -149,6 +158,7 @@ def layout_manifest(*filenames: str) -> bytes:
     return json.dumps(
         {
             "version": 4,
+            "id": "a",
             "layout": {"scale": "N"},
             "camera": {"resolution": {"width": 4, "height": 3}},
             "images": [{"filename": name} for name in filenames],

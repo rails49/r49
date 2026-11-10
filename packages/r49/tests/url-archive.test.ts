@@ -311,22 +311,6 @@ describe('writeChanges', () => {
     expect(writer.calls).toEqual(['put manifest.json']);
   });
 
-  it('mints an id as saveManifest does, and keeps it', async () => {
-    const noId = JSON.parse(new TextDecoder().decode(manifest()));
-    delete noId.id;
-    const archive = await R49Archive.load(
-      await served({ 'manifest.json': new TextEncoder().encode(JSON.stringify(noId)) }),
-    );
-    const first = recording();
-    await archive.writeChanges(first);
-    const second = recording();
-    await archive.writeChanges(second);
-    const id = writtenManifest(first).id;
-    expect(typeof id).toBe('string');
-    expect(writtenManifest(second).id).toBe(id);
-    expect(archive.getManifest().id).toBe(id);
-  });
-
   it('writes a name removed and added again with the new bytes, and does not remove it', async () => {
     const archive = await start('a.jpg');
     archive.removeImage('a.jpg');

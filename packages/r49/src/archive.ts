@@ -1,5 +1,4 @@
 import JSZip from 'jszip';
-import { make_id } from './uid.ts';
 import { R49Error, type FormatRule, type ImageMismatch } from './rules.ts';
 import {
   parseManifest,
@@ -144,14 +143,8 @@ export class R49Archive {
   }
 
   /**
-   * Writes the in-memory manifest back into the archive, minting an archive
-   * `id` first if it has none. Called by export(); rarely needed directly.
-   *
-   * **An existing id is never overwritten.** This method is the single choke
-   * point every write passes through, which is what makes that a guarantee
-   * rather than a convention — including for the download fallback, which
-   * writes a freshly-named file on every save and would otherwise be the one
-   * path that mints a new identity for the same archive each time.
+   * Writes the in-memory manifest back into the archive. Called by export();
+   * rarely needed directly.
    *
    * @throws If no manifest has been loaded or set.
    */
@@ -159,10 +152,9 @@ export class R49Archive {
     this.zip.file(MANIFEST_FILE, this.manifestJson());
   }
 
-  /** The manifest as written, with an `id` minted if it has none. See {@link saveManifest}. */
+  /** The manifest as written. See {@link saveManifest}. */
   private manifestJson(): string {
     if (!this.manifest) throw new Error('No manifest data to save');
-    if (this.manifest.id === undefined) this.manifest.id = make_id();
     return JSON.stringify(this.manifest, null, 2);
   }
 
@@ -350,12 +342,12 @@ export class R49Archive {
    * FORMAT.md also has that writer write by rename: this keeps the order, and the
    * writer's `put` must make each write atomic.
    *
-   * It takes the manifest as it stands when called, with an `id` minted as
-   * {@link saveManifest} does, and the images added so far; an edit made during
-   * the call stays unwritten for the next call. An image written is no longer
-   * held in memory, and {@link getImage} fetches it. A rejected `put` or `remove`
-   * rejects the call, and the next call writes what is still unwritten. Make one
-   * call at a time: a second one started during the first writes alongside it.
+   * It takes the manifest as it stands when called, and the images added so
+   * far; an edit made during the call stays unwritten for the next call. An
+   * image written is no longer held in memory, and {@link getImage} fetches it.
+   * A rejected `put` or `remove` rejects the call, and the next call writes what
+   * is still unwritten. Make one call at a time: a second one started during the
+   * first writes alongside it.
    *
    * @throws On an archive that is not a URL archive, which {@link export} writes.
    */
