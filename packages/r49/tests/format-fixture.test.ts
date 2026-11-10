@@ -59,7 +59,7 @@ describe('the frozen v4 fixture', () => {
     ]);
   });
 
-  it('keeps its id through a re-export, which must not mint a new one', async () => {
+  it('keeps its id through a re-export', async () => {
     const archive = await loadFixture();
     const rewritten = await R49Archive.load(await archive.export());
     expect(rewritten.getManifest().id).toBe('0PKAbvK57FA');

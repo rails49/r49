@@ -14,13 +14,14 @@ import type { ManifestData } from '../src/index.ts';
 //
 // What any reader must decide the same way — accept or refuse, with which rule
 // id, and the DPT and residual — is in conformance/cases/ and runs in
-// conformance.test.ts. What stays here is this package's own: writing, minting
-// and keeping an archive id, and what a loaded manifest holds.
+// conformance.test.ts. What stays here is this package's own: writing and
+// keeping an archive id, and what a loaded manifest holds.
 
 /** A minimal valid v4 manifest, spread-and-overridden per test. */
 function manifest(overrides: Record<string, unknown> = {}): ManifestData {
   return {
     version: 4,
+    id: 'aBcDeFgHiJk',
     layout: { name: 'Test Layout', scale: 'HO', calibration: { points: [] }, sensors: [] },
     camera: { resolution: { width: 1920, height: 1080 } },
     images: [],
@@ -287,45 +288,21 @@ describe('R49Archive', () => {
     });
   });
 
-  // The archive-level id is identity: optional at the format layer, required
-  // by the corpus repo, and — once minted — never changed by anything this
-  // package does. The two properties below are the whole contract, and both
-  // are about *writes*, because a write is the only thing that could break it.
+  // The archive-level id is identity, and never changed by anything this
+  // package does.
   describe('archive id', () => {
-    it('mints one on write when the manifest has none', async () => {
-      const archive = new R49Archive();
-      archive.setManifest(manifest());
-      expect(archive.getManifest().id).toBeUndefined();
-
-      const loaded = await R49Archive.load(await archive.export());
-      expect(typeof loaded.getManifest().id).toBe('string');
-      expect(loaded.getManifest().id).not.toHaveLength(0);
-    });
-
     it('never overwrites an existing id, however many times it is written', async () => {
       const archive = new R49Archive();
-      archive.setManifest(manifest({ id: 'aBcDeFgHiJk' }));
+      archive.setManifest(manifest());
 
-      // Three writes, because the download fallback writes a freshly-named
-      // file on every save: if minting were unconditional this is where a
-      // single archive would acquire a new identity per save.
+      // Three writes, as the download fallback writes a freshly-named file on
+      // every save.
       await archive.export();
       await archive.export();
       const loaded = await R49Archive.load(await archive.export());
 
       expect(loaded.getManifest().id).toBe('aBcDeFgHiJk');
     });
-
-    it('carries a minted id through a reload and a second export unchanged', async () => {
-      const first = new R49Archive();
-      first.setManifest(manifest());
-      const reloaded = await R49Archive.load(await first.export());
-      const minted = reloaded.getManifest().id;
-
-      const again = await R49Archive.load(await reloaded.export());
-      expect(again.getManifest().id).toBe(minted);
-    });
-
   });
 
   // Strictness is per object in zod, so it has to be asserted per object:

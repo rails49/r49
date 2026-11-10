@@ -56,7 +56,7 @@ export interface ValidateOptions {
  */
 export interface Contents {
   readonly path: string;
-  readonly id: string | null;
+  readonly id: string;
   readonly manifest: ManifestData;
   readonly images: ReadonlyMap<string, string>;
 }
@@ -68,7 +68,7 @@ async function contentsOf(path: string, archive: R49Archive): Promise<Contents> 
     const bytes = await archive.getImage(image.filename);
     if (bytes) images.set(image.filename, createHash('sha256').update(bytes).digest('hex'));
   }
-  return { path, id: manifest.id ?? null, manifest, images };
+  return { path, id: manifest.id, manifest, images };
 }
 
 /** The contents of an archive that is not a submission, or `null` for one that will not open. */
@@ -90,7 +90,7 @@ function facts(
   const images = manifest.images;
   const obliquity = obliquityOf(manifest);
   return {
-    id: manifest.id ?? null,
+    id: manifest.id,
     dpt: getDPT(manifest),
     dptResidual: getDPTResidual(manifest),
     cameraHeightMM: manifest.layout.calibration.camera_height_mm ?? null,
@@ -240,10 +240,9 @@ function idCollisions(
   const byPath = new Map<string, Finding[]>();
 
   const seen = new Map<string, string>();
-  for (const other of corpus) if (other.id !== null) seen.set(other.id, other.path);
+  for (const other of corpus) seen.set(other.id, other.path);
 
   for (const { path, id } of submitted) {
-    if (id === null) continue;
     const clash = seen.get(id);
     if (clash !== undefined && clash !== path) {
       byPath.set(path, [
@@ -314,7 +313,7 @@ function compareWithBase(
   submitted: Contents,
   base: readonly Contents[]
 ): { change: Change; warnings: Finding[] } {
-  const sameId = base.filter(b => b.id !== null && b.id === submitted.id);
+  const sameId = base.filter(b => b.id === submitted.id);
   const earlier = sameId.find(b => b.path === submitted.path) ?? sameId[0];
 
   if (earlier === undefined) {
@@ -324,8 +323,8 @@ function compareWithBase(
       warnings.push({
         code: 'archive/id-changed',
         message:
-          `${submitted.path} held the archive ${displaced.id ?? 'with no id'}, and now holds ` +
-          `${submitted.id ?? 'one with no id'}: a different archive. ${BROKEN_REFERENCE} If you ` +
+          `${submitted.path} held the archive ${displaced.id}, and now holds ` +
+          `${submitted.id}: a different archive. ${BROKEN_REFERENCE} If you ` +
           `meant to update that archive, keep its id.`,
       });
     }
@@ -447,15 +446,6 @@ export async function validate(
       ...checkImages(archive),
       ...checkLabels(archive),
     ];
-    if (f.id === null) {
-      errors.push({
-        code: 'archive/id',
-        message:
-          `${input.path} has no archive-level id. Save it again with a writer that adds one, ` +
-          `or add a top-level "id" to its manifest.json: a non-empty string no other ` +
-          `archive in the corpus uses, kept on every later save.`,
-      });
-    }
     const warnings = qualityWarnings(archive, f);
 
     const contents = await contentsOf(input.path, archive);

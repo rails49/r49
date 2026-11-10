@@ -102,6 +102,7 @@ describe('archives the writer produces pass as cases', () => {
       const archive = new R49Archive();
       archive.setManifest({
         version: 4,
+        id: 'aBcDeFgHiJk',
         layout: { scale: 'HO' },
         camera: { resolution: { width: 1920, height: 1080 } },
       } as ManifestData);
@@ -111,6 +112,7 @@ describe('archives the writer produces pass as cases', () => {
       const archive = new R49Archive();
       archive.setManifest({
         version: 4,
+        id: 'aBcDeFgHiJk',
         layout: {
           name: 'Yard',
           scale: 'N',

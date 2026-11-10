@@ -523,18 +523,13 @@ export const ManifestDataSchema = z
   .object({
     version: z.literal(MANIFEST_VERSION),
     /**
-     * Identity of the archive itself, stable across every save.
-     *
-     * **Optional at the format layer, required by the corpus repo** — an
-     * archive without one is still valid v4, which is what lets a hand-built
-     * manifest and every file written before this field existed keep loading.
-     * `R49Archive` mints one on write when it is absent and never overwrites
-     * one that exists, so a file only lacks an `id` until the first save.
+     * Identity of the archive itself, stable across every save. Required: a
+     * manifest without one is refused as `manifest/schema`.
      *
      * It is identity, not an address: the path a file sits at, and its name,
      * may both change without making it a different archive.
      */
-    id: z.string().min(1).optional(),
+    id: z.string().min(1),
     layout: LayoutSchema,
     camera: CameraSchema,
     images: z.array(ImageSchema).default([]),
