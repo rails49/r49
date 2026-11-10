@@ -1,6 +1,6 @@
 {
   "name": "@rails49/r49",
-  "version": "0.3.0",
+  "version": "0.4.0",
   "description": "Read and write .r49 layout archives",
   "license": "MIT",
   "repository": {
