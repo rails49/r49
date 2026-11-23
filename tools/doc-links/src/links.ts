@@ -18,11 +18,11 @@ const HEADING = /^#{1,6} +(.+?)\s*$/gm;
 const NOT_READ = ['http://', 'https://', 'mailto:'];
 const RAILS49 = 'https://github.com/rails49/';
 
-/** The tracked Markdown files, except .implement-loop/. */
+/** The tracked Markdown files. */
 export function pages(root: string): string[] {
   return execFileSync('git', ['ls-files', '-z', '*.md'], { cwd: root, encoding: 'utf8' })
     .split('\0')
-    .filter(page => page && !page.startsWith('.implement-loop/'));
+    .filter(page => page);
 }
 
 /** Each inline and reference-style link's target, with its 1-based line. */
