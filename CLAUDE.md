@@ -4,14 +4,15 @@ gate: ./scripts/check.sh
 
 ## Agent skills
 
-### Issue tracker
+The rules every rails49 repository shares are the organisation's
+[`docs/agents/`](https://github.com/rails49/.github/tree/main/docs/agents):
+`issue-tracker.md`, `triage-labels.md` and `domain.md`.
 
-GitHub Issues on rails49/r49, via the `gh` CLI. See `docs/agents/issue-tracker.md`.
-
-### Triage labels
-
-The five default labels, unchanged: `needs-triage`, `needs-info`, `ready-for-agent`, `ready-for-human`, `wontfix`. See `docs/agents/triage-labels.md`.
-
-### Domain docs
-
-What each kind of doc holds: org [ADR-0021](https://github.com/rails49/.github/blob/main/docs/adr/0021-each-fact-has-one-owner-and-the-glossary-is-glossary-md.md). See `docs/agents/domain.md`.
+- Issue tracker: GitHub Issues on rails49/r49, via the `gh` CLI.
+- Triage labels: `needs-triage`, `needs-info`, `ready-for-agent`,
+  `ready-for-human`, `wontfix`. A parent issue, one whose slices name it under
+  `## Parent`, never carries `ready-for-agent`. Only its slices do, and the
+  parent closes when they are closed.
+- Domain docs: `GLOSSARY.md` and `docs/adr/` at the repo root. What each kind
+  of doc holds: org
+  [ADR-0025](https://github.com/rails49/.github/blob/main/docs/adr/0025-each-fact-has-one-owner-and-an-adr-is-written-after-its-decision-has-run.md).
