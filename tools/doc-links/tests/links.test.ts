@@ -162,7 +162,7 @@ describe('the pages', () => {
 
   it('are the tracked Markdown files', () => {
     expect(list).toContain('FORMAT.md');
-    expect(list).toContain('docs/agents/domain.md');
+    expect(list).toContain('docs/releasing.md');
   });
 
   it('carry more than 50 links', () => {
